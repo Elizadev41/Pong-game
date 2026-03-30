@@ -51,6 +51,9 @@ const game = {
     scoreBoostUntil: 0,
   },
   nextPowerUpScore: 0,
+  lastPowerUpLabel: "",
+  lastPowerUpColor: "#ffffff",
+  lastPowerUpUntil: 0,
 };
 
 const sound = createSoundSystem();
@@ -321,11 +324,17 @@ function refreshBallSizes() {
 }
 
 function getNextPowerUpScore(currentScore = game.score) {
-  return currentScore + Math.floor(Math.random() * 4) + 1;
+  return currentScore + Math.floor(Math.random() * 4) + 2;
 }
 
 function resetPowerUpSchedule() {
   game.nextPowerUpScore = POWER_UP_START_SCORE + Math.floor(Math.random() * 4) + 1;
+}
+
+function showPowerUpMessage(type) {
+  game.lastPowerUpLabel = POWER_UP_TYPES[type].label;
+  game.lastPowerUpColor = POWER_UP_TYPES[type].color;
+  game.lastPowerUpUntil = performance.now() + 1600;
 }
 
 function resetPaddle() {
@@ -345,6 +354,8 @@ function clearEffects() {
   game.effects.tinyBallUntil = 0;
   game.effects.slowMoUntil = 0;
   game.effects.scoreBoostUntil = 0;
+  game.lastPowerUpLabel = "";
+  game.lastPowerUpUntil = 0;
 }
 
 function startCountdown(newGame) {
@@ -491,6 +502,7 @@ function activatePowerUp(type) {
     spawnMultiBall();
   }
 
+  showPowerUpMessage(type);
   playPowerUpSound(type);
 }
 
@@ -848,6 +860,34 @@ function drawActiveEffects() {
   }
 }
 
+function drawPowerUpMessage() {
+  if (game.lastPowerUpUntil <= performance.now()) {
+    return;
+  }
+
+  ctx.save();
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+
+  const width = 172;
+  const height = 34;
+  const x = (game.width - width) / 2;
+  const y = 54;
+
+  ctx.fillStyle = "rgba(10, 8, 18, 0.9)";
+  roundRect(ctx, x, y, width, height, 10);
+  ctx.fill();
+
+  ctx.fillStyle = game.lastPowerUpColor;
+  roundRect(ctx, x + 5, y + 5, 10, height - 10, 3);
+  ctx.fill();
+
+  ctx.fillStyle = "#fff6da";
+  ctx.font = "700 16px Courier New, monospace";
+  ctx.fillText(game.lastPowerUpLabel, game.width / 2 + 8, y + height / 2 + 1);
+  ctx.restore();
+}
+
 function drawOverlay(alpha) {
   ctx.fillStyle = `rgba(3, 8, 16, ${alpha})`;
   ctx.fillRect(0, 0, game.width, game.height);
@@ -1104,6 +1144,7 @@ function animate(now) {
     updateBalls(delta);
     drawBalls();
     drawHud();
+    drawPowerUpMessage();
   } else if (game.state === "countdown") {
     drawBalls();
     drawCountdown(now);
