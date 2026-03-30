@@ -265,37 +265,42 @@ function updateBall(delta) {
 
 function drawBackground() {
   const gradient = ctx.createLinearGradient(0, 0, 0, game.height);
-  gradient.addColorStop(0, "#081221");
-  gradient.addColorStop(0.55, "#10253b");
-  gradient.addColorStop(1, "#183a45");
+  gradient.addColorStop(0, "#120c1c");
+  gradient.addColorStop(0.55, "#19142a");
+  gradient.addColorStop(1, "#09060f");
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, game.width, game.height);
 
-  ctx.fillStyle = "rgba(124, 225, 219, 0.08)";
-  ctx.fillRect(24, 24, game.width - 48, game.height - 48);
+  ctx.fillStyle = "rgba(255, 207, 92, 0.06)";
+  ctx.fillRect(18, 18, game.width - 36, game.height - 36);
 
   for (const star of game.stars) {
-    ctx.fillStyle = `rgba(220, 247, 255, ${star.alpha})`;
+    ctx.fillStyle = `rgba(255, 229, 161, ${star.alpha})`;
     ctx.beginPath();
     ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
     ctx.fill();
   }
+
+  ctx.fillStyle = "rgba(255, 255, 255, 0.035)";
+  for (let y = 0; y < game.height; y += 6) {
+    ctx.fillRect(0, y, game.width, 2);
+  }
 }
 
 function drawArenaGlow() {
-  ctx.strokeStyle = "rgba(120, 237, 230, 0.45)";
-  ctx.lineWidth = 3;
-  roundRect(ctx, 14, 14, game.width - 28, game.height - 28, 18);
+  ctx.strokeStyle = "#ffcf5c";
+  ctx.lineWidth = 4;
+  roundRect(ctx, 12, 12, game.width - 24, game.height - 24, 10);
   ctx.stroke();
 }
 
 function drawPaddle() {
   const paddle = game.paddle;
   const gradient = ctx.createLinearGradient(paddle.x, paddle.y, paddle.x, paddle.y + paddle.height);
-  gradient.addColorStop(0, "#8ce7e0");
-  gradient.addColorStop(1, "#2f8f93");
+  gradient.addColorStop(0, "#ffd76f");
+  gradient.addColorStop(1, "#ff8b3d");
   ctx.fillStyle = gradient;
-  roundRect(ctx, paddle.x, paddle.y, paddle.width, paddle.height, 9);
+  roundRect(ctx, paddle.x, paddle.y, paddle.width, paddle.height, 5);
   ctx.fill();
 }
 
@@ -308,9 +313,9 @@ function drawBall() {
     game.ball.y,
     game.ball.size
   );
-  gradient.addColorStop(0, "#ffffff");
-  gradient.addColorStop(0.45, "#88f4ea");
-  gradient.addColorStop(1, "#1ba6a1");
+  gradient.addColorStop(0, "#fff7d8");
+  gradient.addColorStop(0.45, "#ff8b3d");
+  gradient.addColorStop(1, "#ff476f");
   ctx.fillStyle = gradient;
   ctx.beginPath();
   ctx.arc(game.ball.x, game.ball.y, game.ball.size / 2, 0, Math.PI * 2);
@@ -329,28 +334,28 @@ function drawParticles() {
 
 function drawHud() {
   ctx.textBaseline = "top";
-  ctx.font = "bold 16px Trebuchet MS, Arial, sans-serif";
+  ctx.font = "bold 16px Courier New, monospace";
 
-  drawHudPill(14, 14, 108, 32, `Score ${game.score}`, "#42d8c8");
-  drawHudPill(146, 14, 108, 32, `Best ${game.best}`, "#f9db6d");
-  drawHudPill(278, 14, 108, 32, `Lives ${game.lives}`, "#ff8a8a");
+  drawHudPill(14, 14, 108, 32, `SCORE ${game.score}`, "#ff476f");
+  drawHudPill(146, 14, 108, 32, `BEST ${game.best}`, "#ffcf5c");
+  drawHudPill(278, 14, 108, 32, `LIVES ${game.lives}`, "#57e3ff");
 
-  ctx.fillStyle = "rgba(235, 248, 255, 0.72)";
-  ctx.font = "12px Trebuchet MS, Arial, sans-serif";
+  ctx.fillStyle = "rgba(255, 236, 182, 0.82)";
+  ctx.font = "11px Courier New, monospace";
   ctx.textAlign = "center";
-  ctx.fillText("Move: Mouse / WASD / Arrows   Pause: P   Restart: R", game.width / 2, 54);
+  ctx.fillText("MOVE MOUSE/WASD/ARROWS   P PAUSE   R RESTART", game.width / 2, 54);
 }
 
 function drawHudPill(x, y, width, height, text, accent) {
-  ctx.fillStyle = "rgba(8, 18, 33, 0.72)";
-  roundRect(ctx, x, y, width, height, 16);
+  ctx.fillStyle = "rgba(10, 8, 18, 0.86)";
+  roundRect(ctx, x, y, width, height, 8);
   ctx.fill();
 
   ctx.fillStyle = accent;
-  roundRect(ctx, x + 4, y + 4, 8, height - 8, 4);
+  roundRect(ctx, x + 4, y + 4, 8, height - 8, 2);
   ctx.fill();
 
-  ctx.fillStyle = "#eef9fb";
+  ctx.fillStyle = "#fff6da";
   ctx.textAlign = "left";
   ctx.fillText(text, x + 22, y + 8);
 }
@@ -362,21 +367,21 @@ function drawOverlay(alpha) {
 
 function drawPanel(x, y, width, height) {
   const gradient = ctx.createLinearGradient(x, y, x, y + height);
-  gradient.addColorStop(0, "rgba(12, 24, 42, 0.94)");
-  gradient.addColorStop(1, "rgba(16, 42, 58, 0.94)");
+  gradient.addColorStop(0, "rgba(30, 20, 49, 0.96)");
+  gradient.addColorStop(1, "rgba(12, 10, 20, 0.96)");
   ctx.fillStyle = gradient;
-  roundRect(ctx, x, y, width, height, 24);
+  roundRect(ctx, x, y, width, height, 10);
   ctx.fill();
 
-  ctx.strokeStyle = "rgba(120, 237, 230, 0.28)";
-  ctx.lineWidth = 2;
-  roundRect(ctx, x + 1, y + 1, width - 2, height - 2, 23);
+  ctx.strokeStyle = "#ffcf5c";
+  ctx.lineWidth = 3;
+  roundRect(ctx, x + 1, y + 1, width - 2, height - 2, 9);
   ctx.stroke();
 }
 
 function drawCenteredText(text, y, size, color, weight = "700") {
   ctx.fillStyle = color;
-  ctx.font = `${weight} ${size}px Trebuchet MS, Arial, sans-serif`;
+  ctx.font = `${weight} ${size}px Courier New, monospace`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillText(text, game.width / 2, y);
@@ -384,12 +389,12 @@ function drawCenteredText(text, y, size, color, weight = "700") {
 
 function drawButton(text, button, fill, outline) {
   ctx.fillStyle = fill;
-  roundRect(ctx, button.x, button.y, button.w, button.h, 23);
+  roundRect(ctx, button.x, button.y, button.w, button.h, 8);
   ctx.fill();
 
   ctx.strokeStyle = outline;
-  ctx.lineWidth = 2;
-  roundRect(ctx, button.x, button.y, button.w, button.h, 23);
+  ctx.lineWidth = 3;
+  roundRect(ctx, button.x, button.y, button.w, button.h, 8);
   ctx.stroke();
 
   drawCenteredText(text, button.y + button.h / 2 + 1, 18, "#f7feff");
@@ -399,32 +404,32 @@ function drawWelcome(now) {
   drawOverlay(0.18);
   drawPanel(40, 58, 320, 312);
 
-  ctx.fillStyle = "rgba(85, 224, 218, 0.16)";
+  ctx.fillStyle = "rgba(255, 71, 111, 0.18)";
   ctx.beginPath();
   ctx.arc(320, 92, 40, 0, Math.PI * 2);
   ctx.fill();
 
-  drawCenteredText("Paddle Ball", 104, 34, "#78ede6");
-  drawCenteredText("Arcade Edition", 136, 18, "#f6dd7a", "600");
-  drawCenteredText("Keep the ball alive. Survive as the pace ramps up.", 174, 15, "#d5edf2", "500");
-  drawCenteredText("Best Score: " + game.best, 206, 20, "#ffffff");
+  drawCenteredText("PADDLE BALL", 104, 34, "#ffcf5c");
+  drawCenteredText("RETRO ARCADE", 136, 18, "#57e3ff", "600");
+  drawCenteredText("KEEP THE BALL ALIVE. SURVIVE THE SPEED UP.", 174, 14, "#ffeec7", "500");
+  drawCenteredText("BEST SCORE: " + game.best, 206, 20, "#ffffff");
 
   const pulse = (Math.sin(now / 240) + 1) / 2;
-  const playFill = pulse > 0.5 ? "#15aeb0" : "#0d8f94";
-  drawButton("Play", game.menuButtons.play, playFill, "#74ece5");
-  drawButton("How To Play", game.menuButtons.how, "#22384e", "#8ad9ff");
+  const playFill = pulse > 0.5 ? "#ff476f" : "#cc2f56";
+  drawButton("PLAY", game.menuButtons.play, playFill, "#ffd68a");
+  drawButton("HOW TO PLAY", game.menuButtons.how, "#2c2140", "#57e3ff");
 
-  ctx.fillStyle = "rgba(229, 246, 248, 0.72)";
-  ctx.font = "13px Trebuchet MS, Arial, sans-serif";
+  ctx.fillStyle = "rgba(255, 238, 199, 0.78)";
+  ctx.font = "12px Courier New, monospace";
   ctx.textAlign = "center";
-  ctx.fillText("Mouse, WASD, and arrow keys all work.", game.width / 2, 381);
+  ctx.fillText("MOUSE, WASD, AND ARROWS ALL WORK.", game.width / 2, 381);
 }
 
 function drawHowToPlay() {
   drawOverlay(0.22);
   drawPanel(34, 42, 332, 334);
 
-  drawCenteredText("How To Play", 82, 30, "#8eece7");
+  drawCenteredText("HOW TO PLAY", 82, 30, "#ffcf5c");
 
   const lines = [
     "Keep the ball from falling past the paddle.",
@@ -435,24 +440,24 @@ function drawHowToPlay() {
     "Your best score is saved automatically.",
   ];
 
-  ctx.fillStyle = "#e8f7fb";
-  ctx.font = "15px Trebuchet MS, Arial, sans-serif";
+  ctx.fillStyle = "#fff4d2";
+  ctx.font = "14px Courier New, monospace";
   ctx.textAlign = "left";
   ctx.textBaseline = "middle";
 
   let y = 128;
   for (const line of lines) {
-    ctx.fillStyle = "#78ede6";
+    ctx.fillStyle = "#ff476f";
     ctx.beginPath();
     ctx.arc(64, y, 4, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.fillStyle = "#e8f7fb";
+    ctx.fillStyle = "#fff4d2";
     ctx.fillText(line, 80, y);
     y += 36;
   }
 
-  drawButton("Back", game.menuButtons.back, "#22384e", "#8ad9ff");
+  drawButton("BACK", game.menuButtons.back, "#2c2140", "#57e3ff");
 }
 
 function drawCountdown(now) {
@@ -467,7 +472,7 @@ function drawCountdown(now) {
     return;
   }
 
-  drawCenteredText("Get Ready", 160, 22, "#ffffff");
+  drawCenteredText("GET READY", 160, 22, "#ffffff");
   drawCenteredText(String(num), 224, 92, "#ffe27a");
 }
 
@@ -476,9 +481,9 @@ function drawPaused() {
   drawBall();
   drawOverlay(0.44);
   drawPanel(72, 118, 256, 160);
-  drawCenteredText("Paused", 166, 34, "#8eece7");
-  drawCenteredText("Press P to resume", 214, 18, "#ffffff", "500");
-  drawCenteredText("Press R to restart", 244, 18, "#f6dd7a", "500");
+  drawCenteredText("PAUSED", 166, 34, "#57e3ff");
+  drawCenteredText("PRESS P TO RESUME", 214, 16, "#ffffff", "500");
+  drawCenteredText("PRESS R TO RESTART", 244, 16, "#f6dd7a", "500");
 }
 
 function drawLost() {
@@ -486,10 +491,10 @@ function drawLost() {
   drawBall();
   drawOverlay(0.46);
   drawPanel(58, 92, 284, 214);
-  drawCenteredText("Game Over", 142, 34, "#ff8a8a");
-  drawCenteredText("Final Score: " + game.score, 192, 22, "#ffffff");
-  drawCenteredText("Best Score: " + game.best, 224, 18, "#f6dd7a", "600");
-  drawButton("Play Again", { x: 120, y: 252, w: 160, h: 46 }, "#15aeb0", "#74ece5");
+  drawCenteredText("GAME OVER", 142, 34, "#ff476f");
+  drawCenteredText("FINAL SCORE: " + game.score, 192, 20, "#ffffff");
+  drawCenteredText("BEST SCORE: " + game.best, 224, 18, "#f6dd7a", "600");
+  drawButton("PLAY AGAIN", { x: 120, y: 252, w: 160, h: 46 }, "#cc2f56", "#ffd68a");
 }
 
 function roundRect(context, x, y, width, height, radius) {

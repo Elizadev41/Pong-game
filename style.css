@@ -9,32 +9,40 @@ body {
   display: grid;
   place-items: center;
   background:
-    radial-gradient(circle at top, rgba(97, 255, 234, 0.14), transparent 30%),
-    linear-gradient(180deg, #07111f 0%, #0e2035 52%, #11252b 100%);
-  font-family: "Trebuchet MS", Arial, sans-serif;
+    radial-gradient(circle at top, rgba(255, 207, 92, 0.14), transparent 28%),
+    linear-gradient(180deg, #120b1f 0%, #1d1230 48%, #09060f 100%);
+  font-family: "Courier New", Courier, monospace;
 }
 
 .app {
   text-align: center;
-  padding: 18px;
-  border-radius: 24px;
-  background: rgba(3, 10, 20, 0.35);
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+  padding: 22px 22px 18px;
+  border: 4px solid #ffcf5c;
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(0, 0, 0, 0.18)),
+    #140f23;
+  box-shadow:
+    0 0 0 6px #3a2359,
+    0 26px 60px rgba(0, 0, 0, 0.45);
 }
 
 #gameCanvas {
   display: block;
-  background: #081221;
-  border-radius: 18px;
-  border: 2px solid rgba(127, 239, 232, 0.45);
+  background: #0a0f18;
+  border-radius: 10px;
+  border: 4px solid #ffcf5c;
   box-shadow:
     0 18px 42px rgba(0, 0, 0, 0.45),
-    0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+    0 0 0 3px #2b1c43,
+    inset 0 0 0 2px rgba(255, 255, 255, 0.03);
+  image-rendering: pixelated;
 }
 
 .hint {
   margin-top: 14px;
-  color: #d9eff2;
-  font-size: 14px;
-  letter-spacing: 0.02em;
+  color: #ffe7a8;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
