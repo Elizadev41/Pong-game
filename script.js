@@ -302,13 +302,13 @@ function getMenuLayout() {
 
 function getHowToLayout() {
   const panelWidth = 344;
-  const panelHeight = 344;
+  const panelHeight = 322;
   const panelX = (game.width - panelWidth) / 2;
-  const panelY = 34;
+  const panelY = 42;
 
   return {
     panel: { x: panelX, y: panelY, w: panelWidth, h: panelHeight },
-    back: { x: panelX + 112, y: panelY + 290, w: 120, h: 42 },
+    back: { x: panelX + 122, y: panelY + 272, w: 100, h: 30 },
     textX: panelX + 52,
     bulletX: panelX + 36,
   };
@@ -322,13 +322,13 @@ function getPauseLayout() {
 
 function getGameOverLayout() {
   const panelWidth = 284;
-  const panelHeight = 274;
+  const panelHeight = 252;
   const panelX = (game.width - panelWidth) / 2;
-  const panelY = 62;
+  const panelY = 72;
 
   return {
     panel: { x: panelX, y: panelY, w: panelWidth, h: panelHeight },
-    playAgain: { x: panelX + 62, y: panelY + 218, w: 160, h: 46 },
+    playAgain: { x: panelX + 82, y: panelY + 206, w: 120, h: 30 },
   };
 }
 
@@ -589,6 +589,19 @@ function getRandomPowerUpType() {
   return types[Math.floor(Math.random() * types.length)];
 }
 
+function isTimedPowerUp(type) {
+  return type === "tinyBall" || type === "slowMo" || type === "scoreBoost";
+}
+
+function hasActiveTimedPowerUp() {
+  const now = performance.now();
+  return (
+    game.effects.tinyBallUntil > now ||
+    game.effects.slowMoUntil > now ||
+    game.effects.scoreBoostUntil > now
+  );
+}
+
 function maybeSpawnPowerUp(x, y) {
   if (game.score < game.nextPowerUpScore) {
     return;
@@ -598,7 +611,15 @@ function maybeSpawnPowerUp(x, y) {
     return;
   }
 
+  if (game.powerUps.length > 0) {
+    return;
+  }
+
   const type = getRandomPowerUpType();
+  if (isTimedPowerUp(type) && hasActiveTimedPowerUp()) {
+    game.nextPowerUpScore = getNextPowerUpScore();
+    return;
+  }
   const config = POWER_UP_TYPES[type];
 
   game.powerUps.push({
@@ -618,11 +639,19 @@ function activatePowerUp(type) {
   const now = performance.now();
 
   if (type === "tinyBall") {
+    game.effects.slowMoUntil = 0;
+    game.effects.scoreBoostUntil = 0;
     game.effects.tinyBallUntil = now + 10000;
     refreshBallSizes();
   } else if (type === "slowMo") {
+    game.effects.tinyBallUntil = 0;
+    game.effects.scoreBoostUntil = 0;
+    refreshBallSizes();
     game.effects.slowMoUntil = now + 10000;
   } else if (type === "scoreBoost") {
+    game.effects.tinyBallUntil = 0;
+    game.effects.slowMoUntil = 0;
+    refreshBallSizes();
     game.effects.scoreBoostUntil = now + 10000;
   } else if (type === "extraLife") {
     game.lives += 1;
@@ -1273,7 +1302,7 @@ function drawHowToPlay() {
   drawOverlay(0.22);
   drawPanel(layout.panel.x, layout.panel.y, layout.panel.w, layout.panel.h);
 
-  drawCenteredText("HOW TO PLAY", layout.panel.y + 48, 30, "#ffcf5c");
+  drawCenteredText("HOW TO PLAY", layout.panel.y + 38, 26, "#ffcf5c");
 
   const lines = [
     "Keep the ball above the paddle.",
@@ -1284,15 +1313,15 @@ function drawHowToPlay() {
     "Best score saves automatically.",
   ];
 
-  let y = layout.panel.y + 94;
+  let y = layout.panel.y + 78;
   for (const line of lines) {
     ctx.fillStyle = "#ff476f";
     ctx.beginPath();
     ctx.arc(layout.bulletX, y, 4, 0, Math.PI * 2);
     ctx.fill();
 
-    const lineCount = drawWrappedText(line, layout.textX, y, 13, "#fff4d2", 264, 16);
-    y += Math.max(32, lineCount * 18 + 12);
+    const lineCount = drawWrappedText(line, layout.textX, y, 12, "#fff4d2", 264, 15);
+    y += Math.max(28, lineCount * 16 + 10);
   }
 
   drawButton("BACK", layout.back, "#2c2140", "#57e3ff");
@@ -1342,14 +1371,14 @@ function drawLost() {
   drawBalls();
   drawOverlay(0.46);
   drawPanel(layout.panel.x, layout.panel.y, layout.panel.w, layout.panel.h);
-  drawCenteredText("GAME OVER", layout.panel.y + 30, 34, "#ff476f");
-  drawCenteredText("FINAL SCORE: " + game.score, layout.panel.y + 78, 20, "#ffffff");
-  drawCenteredText("BEST SCORE: " + game.best, layout.panel.y + 106, 18, "#f6dd7a", "600");
+  drawCenteredText("GAME OVER", layout.panel.y + 26, 28, "#ff476f");
+  drawCenteredText("FINAL SCORE: " + game.score, layout.panel.y + 66, 18, "#ffffff");
+  drawCenteredText("BEST SCORE: " + game.best, layout.panel.y + 92, 16, "#f6dd7a", "600");
 
-  let y = layout.panel.y + 136;
+  let y = layout.panel.y + 118;
   for (const line of statLines) {
-    drawCenteredText(line, y, 14, "#e8e1ff", "500");
-    y += 20;
+    drawCenteredText(line, y, 12, "#e8e1ff", "500");
+    y += 16;
   }
 
   drawButton("PLAY AGAIN", layout.playAgain, "#cc2f56", "#ffd68a");
