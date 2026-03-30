@@ -51,9 +51,14 @@ resetBall();
 
 function createSoundSystem() {
   const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+  const music = new Audio("arcade.mp3");
+  music.loop = true;
+  music.volume = 0.34;
+  music.preload = "auto";
 
   return {
     context: AudioContextCtor ? new AudioContextCtor() : null,
+    music,
     muted: loadMutedPreference(),
     enabled: false,
     lastWallToneAt: 0,
@@ -85,15 +90,16 @@ function updateSoundButton() {
 }
 
 async function unlockSound() {
-  if (!sound.context || sound.enabled) {
-    return;
-  }
-
   try {
-    if (sound.context.state === "suspended") {
+    if (sound.context && sound.context.state === "suspended") {
       await sound.context.resume();
     }
-    sound.enabled = sound.context.state === "running";
+
+    sound.enabled = !sound.context || sound.context.state === "running";
+
+    if (!sound.muted) {
+      sound.music.play().catch(() => {});
+    }
   } catch {
     sound.enabled = false;
   }
@@ -177,7 +183,10 @@ function toggleSound() {
   sound.muted = !sound.muted;
   saveMutedPreference();
   updateSoundButton();
-  if (!sound.muted) {
+  if (sound.muted) {
+    sound.music.pause();
+  } else {
+    sound.music.play().catch(() => {});
     playButtonSound();
   }
 }
