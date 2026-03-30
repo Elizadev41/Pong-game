@@ -13,14 +13,14 @@ const DIFFICULTY_MODES = {
   easy: {
     label: "EASY",
     color: "#7dffb6",
-    startingLives: 4,
+    startingLives: 5,
     paddleWidth: 126,
     minPaddleWidth: 74,
     paddleSpeed: 450,
     launchSpeed: 300,
     speedGainPerScore: 8,
     maxLaunchBonus: 110,
-    paddleShrinkPerScore: 1.4,
+    paddleShrinkPerScore: 1.2,
   },
   normal: {
     label: "NORMAL",
@@ -44,7 +44,7 @@ const DIFFICULTY_MODES = {
     launchSpeed: 344,
     speedGainPerScore: 12,
     maxLaunchBonus: 175,
-    paddleShrinkPerScore: 2.4,
+    paddleShrinkPerScore: 2.2,
   },
 };
 const POWER_UP_TYPES = {
