@@ -1,7 +1,9 @@
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
+const soundToggle = document.getElementById("soundToggle");
 
 const STORAGE_KEY = "paddle-ball-best-score";
+const SOUND_STORAGE_KEY = "paddle-ball-sound-muted";
 
 const game = {
   width: canvas.width,
@@ -41,8 +43,144 @@ const game = {
   },
 };
 
+const sound = createSoundSystem();
+updateSoundButton();
+
 createStars();
 resetBall();
+
+function createSoundSystem() {
+  const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+
+  return {
+    context: AudioContextCtor ? new AudioContextCtor() : null,
+    muted: loadMutedPreference(),
+    enabled: false,
+    lastWallToneAt: 0,
+    lastButtonToneAt: 0,
+  };
+}
+
+function loadMutedPreference() {
+  try {
+    return window.localStorage.getItem(SOUND_STORAGE_KEY) === "true";
+  } catch {
+    return false;
+  }
+}
+
+function saveMutedPreference() {
+  try {
+    window.localStorage.setItem(SOUND_STORAGE_KEY, String(sound.muted));
+  } catch {}
+}
+
+function updateSoundButton() {
+  if (!soundToggle) {
+    return;
+  }
+
+  soundToggle.textContent = sound.muted ? "Sound: Off" : "Sound: On";
+  soundToggle.setAttribute("aria-pressed", String(sound.muted));
+}
+
+async function unlockSound() {
+  if (!sound.context || sound.enabled) {
+    return;
+  }
+
+  try {
+    if (sound.context.state === "suspended") {
+      await sound.context.resume();
+    }
+    sound.enabled = sound.context.state === "running";
+  } catch {
+    sound.enabled = false;
+  }
+}
+
+function playTone({
+  frequency,
+  duration = 0.12,
+  type = "sine",
+  volume = 0.035,
+  slideTo,
+  when = 0,
+}) {
+  if (!sound.context || sound.muted || !sound.enabled) {
+    return;
+  }
+
+  const startAt = sound.context.currentTime + when;
+  const oscillator = sound.context.createOscillator();
+  const gain = sound.context.createGain();
+
+  oscillator.type = type;
+  oscillator.frequency.setValueAtTime(frequency, startAt);
+  if (slideTo) {
+    oscillator.frequency.exponentialRampToValueAtTime(slideTo, startAt + duration);
+  }
+
+  gain.gain.setValueAtTime(0.0001, startAt);
+  gain.gain.exponentialRampToValueAtTime(volume, startAt + 0.01);
+  gain.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
+
+  oscillator.connect(gain);
+  gain.connect(sound.context.destination);
+  oscillator.start(startAt);
+  oscillator.stop(startAt + duration + 0.02);
+}
+
+function playWallSound() {
+  const now = performance.now();
+  if (now - sound.lastWallToneAt < 45) {
+    return;
+  }
+
+  sound.lastWallToneAt = now;
+  playTone({ frequency: 420, slideTo: 320, duration: 0.08, type: "square", volume: 0.025 });
+}
+
+function playPaddleSound() {
+  playTone({ frequency: 520, slideTo: 760, duration: 0.09, type: "square", volume: 0.04 });
+  playTone({ frequency: 660, slideTo: 880, duration: 0.07, type: "triangle", volume: 0.022, when: 0.015 });
+}
+
+function playCountdownSound() {
+  playTone({ frequency: 350, slideTo: 390, duration: 0.09, type: "triangle", volume: 0.028 });
+}
+
+function playLaunchSound() {
+  playTone({ frequency: 390, slideTo: 720, duration: 0.16, type: "sawtooth", volume: 0.03 });
+}
+
+function playLifeLostSound() {
+  playTone({ frequency: 280, slideTo: 150, duration: 0.22, type: "sawtooth", volume: 0.04 });
+}
+
+function playGameOverSound() {
+  playTone({ frequency: 260, slideTo: 180, duration: 0.16, type: "square", volume: 0.04 });
+  playTone({ frequency: 210, slideTo: 120, duration: 0.24, type: "triangle", volume: 0.032, when: 0.08 });
+}
+
+function playButtonSound() {
+  const now = performance.now();
+  if (now - sound.lastButtonToneAt < 80) {
+    return;
+  }
+
+  sound.lastButtonToneAt = now;
+  playTone({ frequency: 480, slideTo: 620, duration: 0.07, type: "triangle", volume: 0.025 });
+}
+
+function toggleSound() {
+  sound.muted = !sound.muted;
+  saveMutedPreference();
+  updateSoundButton();
+  if (!sound.muted) {
+    playButtonSound();
+  }
+}
 
 function getMenuLayout() {
   const panelWidth = 320;
@@ -144,6 +282,7 @@ function startCountdown(newGame) {
   game.countdownStart = performance.now();
   resetBall();
   clearParticles();
+  playCountdownSound();
 }
 
 function launchBall() {
@@ -152,6 +291,7 @@ function launchBall() {
   game.ball.vx = Math.cos(angle) * game.ball.speed;
   game.ball.vy = Math.sin(angle) * game.ball.speed;
   game.state = "playing";
+  playLaunchSound();
 }
 
 function pauseGame() {
@@ -254,18 +394,21 @@ function updateBall(delta) {
     ball.x = radius;
     ball.vx *= -1;
     spawnParticles(ball.x, ball.y, "#7be7e7", 8);
+    playWallSound();
   }
 
   if (ball.x + radius >= game.width) {
     ball.x = game.width - radius;
     ball.vx *= -1;
     spawnParticles(ball.x, ball.y, "#7be7e7", 8);
+    playWallSound();
   }
 
   if (ball.y - radius <= 0) {
     ball.y = radius;
     ball.vy *= -1;
     spawnParticles(ball.x, ball.y, "#ffe27a", 10, 55);
+    playWallSound();
   }
 
   const paddle = game.paddle;
@@ -290,17 +433,20 @@ function updateBall(delta) {
     saveBestScore();
     updateDifficulty();
     spawnParticles(ball.x, ball.y, "#5ff7c8", 16, -80);
+    playPaddleSound();
   }
 
   if (ball.y - radius > game.height) {
     game.lives -= 1;
     spawnParticles(ball.x, game.height - 8, "#ff7d7d", 18, -100);
+    playLifeLostSound();
 
     if (game.lives <= 0) {
       game.best = Math.max(game.best, game.score);
       saveBestScore();
       game.state = "lost";
       resetBall();
+      playGameOverSound();
     } else {
       startCountdown(false);
     }
@@ -684,7 +830,12 @@ canvas.addEventListener("mousemove", (event) => {
   game.lastMouseMove = performance.now();
 });
 
+canvas.addEventListener("pointerdown", () => {
+  unlockSound();
+});
+
 canvas.addEventListener("click", (event) => {
+  unlockSound();
   const rect = canvas.getBoundingClientRect();
   const clickX = ((event.clientX - rect.left) / rect.width) * canvas.width;
   const clickY = ((event.clientY - rect.top) / rect.height) * canvas.height;
@@ -694,11 +845,13 @@ canvas.addEventListener("click", (event) => {
 
   if (game.state === "welcome") {
     if (pointInButton(menuLayout.play, clickX, clickY)) {
+      playButtonSound();
       startCountdown(true);
       return;
     }
 
     if (pointInButton(menuLayout.how, clickX, clickY)) {
+      playButtonSound();
       game.state = "how";
     }
 
@@ -706,19 +859,29 @@ canvas.addEventListener("click", (event) => {
   }
 
   if (game.state === "how" && pointInButton(howLayout.back, clickX, clickY)) {
+    playButtonSound();
     game.state = "welcome";
     return;
   }
 
   if (game.state === "lost" && pointInButton(gameOverLayout.playAgain, clickX, clickY)) {
+    playButtonSound();
     startCountdown(true);
   }
 });
 
+if (soundToggle) {
+  soundToggle.addEventListener("click", async () => {
+    await unlockSound();
+    toggleSound();
+  });
+}
+
 window.addEventListener("keydown", (event) => {
+  unlockSound();
   const key = event.key.toLowerCase();
 
-  if (["arrowleft", "arrowright", " ", "p", "r"].includes(key)) {
+  if (["arrowleft", "arrowright", " ", "p", "r", "m"].includes(key)) {
     event.preventDefault();
   }
 
@@ -742,7 +905,12 @@ window.addEventListener("keydown", (event) => {
     restartGame();
   }
 
+  if (key === "m") {
+    toggleSound();
+  }
+
   if ((key === "enter" || key === " ") && game.state === "welcome") {
+    playButtonSound();
     startCountdown(true);
   }
 });
