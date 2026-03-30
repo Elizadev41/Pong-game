@@ -4,6 +4,15 @@ const soundToggle = document.getElementById("soundToggle");
 
 const STORAGE_KEY = "paddle-ball-best-score";
 const SOUND_STORAGE_KEY = "paddle-ball-sound-muted";
+const BASE_BALL_SIZE = 18;
+const TINY_BALL_SIZE = 12;
+const POWER_UP_TYPES = {
+  tinyBall: { label: "TINY BALL", color: "#57e3ff" },
+  slowMo: { label: "SLOW MO", color: "#9f8cff" },
+  scoreBoost: { label: "2X SCORE", color: "#ffcf5c" },
+  extraLife: { label: "+1 LIFE", color: "#ff6f91" },
+  multiBall: { label: "MULTI BALL", color: "#7dffb6" },
+};
 
 const game = {
   width: canvas.width,
@@ -17,14 +26,8 @@ const game = {
     y: canvas.height - 30,
     speed: 420,
   },
-  ball: {
-    size: 18,
-    x: canvas.width / 2,
-    y: canvas.height * 0.46,
-    vx: 0,
-    vy: 0,
-    speed: 320,
-  },
+  balls: [],
+  powerUps: [],
   particles: [],
   stars: [],
   score: 0,
@@ -41,13 +44,18 @@ const game = {
     left: false,
     right: false,
   },
+  effects: {
+    tinyBallUntil: 0,
+    slowMoUntil: 0,
+    scoreBoostUntil: 0,
+  },
 };
 
 const sound = createSoundSystem();
 updateSoundButton();
 
 createStars();
-resetBall();
+resetBalls();
 
 function createSoundSystem() {
   const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
@@ -179,6 +187,21 @@ function playButtonSound() {
   playTone({ frequency: 480, slideTo: 620, duration: 0.07, type: "triangle", volume: 0.025 });
 }
 
+function playPowerUpSound(type) {
+  if (type === "extraLife") {
+    playTone({ frequency: 560, slideTo: 940, duration: 0.18, type: "triangle", volume: 0.04 });
+    return;
+  }
+
+  if (type === "multiBall") {
+    playTone({ frequency: 420, slideTo: 680, duration: 0.14, type: "square", volume: 0.034 });
+    playTone({ frequency: 520, slideTo: 860, duration: 0.16, type: "triangle", volume: 0.026, when: 0.04 });
+    return;
+  }
+
+  playTone({ frequency: 470, slideTo: 760, duration: 0.13, type: "triangle", volume: 0.032 });
+}
+
 function toggleSound() {
   sound.muted = !sound.muted;
   saveMutedPreference();
@@ -268,11 +291,31 @@ function createStars() {
   }
 }
 
-function resetBall() {
-  game.ball.x = game.width / 2;
-  game.ball.y = game.height * 0.46;
-  game.ball.vx = 0;
-  game.ball.vy = 0;
+function createBall(overrides = {}) {
+  return {
+    size: getCurrentBallSize(),
+    x: game.width / 2,
+    y: game.height * 0.46,
+    vx: 0,
+    vy: 0,
+    speed: 320,
+    ...overrides,
+  };
+}
+
+function resetBalls() {
+  game.balls = [createBall()];
+}
+
+function getCurrentBallSize() {
+  return isTinyBallActive() ? TINY_BALL_SIZE : BASE_BALL_SIZE;
+}
+
+function refreshBallSizes() {
+  const size = getCurrentBallSize();
+  for (const ball of game.balls) {
+    ball.size = size;
+  }
 }
 
 function resetPaddle() {
@@ -280,25 +323,47 @@ function resetPaddle() {
   game.paddle.x = game.width / 2 - game.paddle.width / 2;
 }
 
+function clearParticles() {
+  game.particles.length = 0;
+}
+
+function clearPowerUps() {
+  game.powerUps.length = 0;
+}
+
+function clearEffects() {
+  game.effects.tinyBallUntil = 0;
+  game.effects.slowMoUntil = 0;
+  game.effects.scoreBoostUntil = 0;
+}
+
 function startCountdown(newGame) {
   if (newGame) {
     game.score = 0;
     game.lives = 3;
+    clearEffects();
+    clearPowerUps();
     resetPaddle();
   }
 
   game.state = "countdown";
   game.countdownStart = performance.now();
-  resetBall();
+  resetBalls();
   clearParticles();
   playCountdownSound();
 }
 
 function launchBall() {
-  const angle = (Math.random() * 120 + 210) * (Math.PI / 180);
-  game.ball.speed = 320 + Math.min(game.score * 10, 140);
-  game.ball.vx = Math.cos(angle) * game.ball.speed;
-  game.ball.vy = Math.sin(angle) * game.ball.speed;
+  const launchSpeed = 320 + Math.min(game.score * 10, 140);
+
+  for (const ball of game.balls) {
+    const angle = (Math.random() * 120 + 210) * (Math.PI / 180);
+    ball.speed = launchSpeed;
+    ball.size = getCurrentBallSize();
+    ball.vx = Math.cos(angle) * launchSpeed;
+    ball.vy = Math.sin(angle) * launchSpeed;
+  }
+
   game.state = "playing";
   playLaunchSound();
 }
@@ -318,10 +383,6 @@ function resumeGame() {
 
 function restartGame() {
   startCountdown(true);
-}
-
-function clearParticles() {
-  game.particles.length = 0;
 }
 
 function updateDifficulty() {
@@ -373,6 +434,124 @@ function updateStars(delta) {
   }
 }
 
+function getRandomPowerUpType() {
+  const types = ["tinyBall", "slowMo", "scoreBoost", "extraLife", "multiBall"];
+  return types[Math.floor(Math.random() * types.length)];
+}
+
+function maybeSpawnPowerUp(x, y) {
+  if (Math.random() > 0.2) {
+    return;
+  }
+
+  const type = getRandomPowerUpType();
+  const config = POWER_UP_TYPES[type];
+
+  game.powerUps.push({
+    type,
+    x,
+    y,
+    vy: 96,
+    size: 18,
+    color: config.color,
+    label: config.label,
+  });
+}
+
+function activatePowerUp(type) {
+  const now = performance.now();
+
+  if (type === "tinyBall") {
+    game.effects.tinyBallUntil = now + 10000;
+    refreshBallSizes();
+  } else if (type === "slowMo") {
+    game.effects.slowMoUntil = now + 9000;
+  } else if (type === "scoreBoost") {
+    game.effects.scoreBoostUntil = now + 10000;
+  } else if (type === "extraLife") {
+    game.lives += 1;
+  } else if (type === "multiBall") {
+    spawnMultiBall();
+  }
+
+  playPowerUpSound(type);
+}
+
+function spawnMultiBall() {
+  if (game.balls.length === 0) {
+    return;
+  }
+
+  const sourceBall = game.balls[0];
+  const ballSize = getCurrentBallSize();
+
+  for (const direction of [-1, 1]) {
+    game.balls.push(
+      createBall({
+        x: sourceBall.x,
+        y: sourceBall.y,
+        size: ballSize,
+        speed: sourceBall.speed,
+        vx: (Math.abs(sourceBall.vx) + 80) * direction,
+        vy: -Math.max(220, Math.abs(sourceBall.vy) || sourceBall.speed),
+      })
+    );
+  }
+}
+
+function updatePowerUps(delta) {
+  const paddle = game.paddle;
+
+  for (let i = game.powerUps.length - 1; i >= 0; i -= 1) {
+    const powerUp = game.powerUps[i];
+    powerUp.y += powerUp.vy * delta;
+
+    const caught =
+      powerUp.x + powerUp.size >= paddle.x &&
+      powerUp.x - powerUp.size <= paddle.x + paddle.width &&
+      powerUp.y + powerUp.size >= paddle.y &&
+      powerUp.y - powerUp.size <= paddle.y + paddle.height;
+
+    if (caught) {
+      activatePowerUp(powerUp.type);
+      spawnParticles(powerUp.x, powerUp.y, powerUp.color, 18, -70);
+      game.powerUps.splice(i, 1);
+      continue;
+    }
+
+    if (powerUp.y - powerUp.size > game.height) {
+      game.powerUps.splice(i, 1);
+    }
+  }
+}
+
+function isTinyBallActive() {
+  return game.effects.tinyBallUntil > performance.now();
+}
+
+function isScoreBoostActive() {
+  return game.effects.scoreBoostUntil > performance.now();
+}
+
+function isSlowMoActive() {
+  return game.effects.slowMoUntil > performance.now();
+}
+
+function updateEffects(now) {
+  if (game.effects.tinyBallUntil <= now && game.effects.tinyBallUntil !== 0) {
+    game.effects.tinyBallUntil = 0;
+    refreshBallSizes();
+  }
+
+  if (game.effects.slowMoUntil <= now && game.effects.slowMoUntil !== 0) {
+    game.effects.slowMoUntil = 0;
+  }
+
+  if (game.effects.scoreBoostUntil <= now && game.effects.scoreBoostUntil !== 0) {
+    game.effects.scoreBoostUntil = 0;
+  }
+}
+
 function updatePaddle(delta, now) {
   if (game.keys.left || game.keys.right) {
     game.activeControl = "keyboard";
@@ -392,12 +571,12 @@ function updatePaddle(delta, now) {
   game.paddle.x = clamp(game.paddle.x, 0, game.width - game.paddle.width);
 }
 
-function updateBall(delta) {
-  const ball = game.ball;
+function updateBall(ball, delta) {
   const radius = ball.size / 2;
+  const speedFactor = isSlowMoActive() ? 0.62 : 1;
 
-  ball.x += ball.vx * delta;
-  ball.y += ball.vy * delta;
+  ball.x += ball.vx * delta * speedFactor;
+  ball.y += ball.vy * delta * speedFactor;
 
   if (ball.x - radius <= 0) {
     ball.x = radius;
@@ -436,29 +615,48 @@ function updateBall(delta) {
     ball.y = paddle.y - radius;
     ball.vx = offset * 290;
     ball.vy = -speed;
+    ball.speed = speed;
 
-    game.score += 1;
+    game.score += isScoreBoostActive() ? 2 : 1;
     game.best = Math.max(game.best, game.score);
     saveBestScore();
     updateDifficulty();
     spawnParticles(ball.x, ball.y, "#5ff7c8", 16, -80);
     playPaddleSound();
+    maybeSpawnPowerUp(ball.x, ball.y);
   }
 
   if (ball.y - radius > game.height) {
-    game.lives -= 1;
     spawnParticles(ball.x, game.height - 8, "#ff7d7d", 18, -100);
-    playLifeLostSound();
+    return true;
+  }
 
-    if (game.lives <= 0) {
-      game.best = Math.max(game.best, game.score);
-      saveBestScore();
-      game.state = "lost";
-      resetBall();
-      playGameOverSound();
-    } else {
-      startCountdown(false);
+  return false;
+}
+
+function updateBalls(delta) {
+  for (let i = game.balls.length - 1; i >= 0; i -= 1) {
+    const ballLost = updateBall(game.balls[i], delta);
+    if (ballLost) {
+      game.balls.splice(i, 1);
     }
+  }
+
+  if (game.balls.length > 0) {
+    return;
+  }
+
+  game.lives -= 1;
+  playLifeLostSound();
+
+  if (game.lives <= 0) {
+    game.best = Math.max(game.best, game.score);
+    saveBestScore();
+    game.state = "lost";
+    resetBalls();
+    playGameOverSound();
+  } else {
+    startCountdown(false);
   }
 }
 
@@ -503,22 +701,53 @@ function drawPaddle() {
   ctx.fill();
 }
 
-function drawBall() {
-  const gradient = ctx.createRadialGradient(
-    game.ball.x - 3,
-    game.ball.y - 3,
-    2,
-    game.ball.x,
-    game.ball.y,
-    game.ball.size
-  );
+function drawBall(ball) {
+  const gradient = ctx.createRadialGradient(ball.x - 3, ball.y - 3, 2, ball.x, ball.y, ball.size);
   gradient.addColorStop(0, "#fff7d8");
   gradient.addColorStop(0.45, "#ff8b3d");
   gradient.addColorStop(1, "#ff476f");
   ctx.fillStyle = gradient;
   ctx.beginPath();
-  ctx.arc(game.ball.x, game.ball.y, game.ball.size / 2, 0, Math.PI * 2);
+  ctx.arc(ball.x, ball.y, ball.size / 2, 0, Math.PI * 2);
   ctx.fill();
+}
+
+function drawBalls() {
+  for (const ball of game.balls) {
+    drawBall(ball);
+  }
+}
+
+function drawPowerUps() {
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+
+  for (const powerUp of game.powerUps) {
+    ctx.fillStyle = hexToRgba(powerUp.color, 0.18);
+    ctx.beginPath();
+    ctx.arc(powerUp.x, powerUp.y, powerUp.size + 5, 0, Math.PI * 2);
+    ctx.fill();
+
+    const gradient = ctx.createLinearGradient(powerUp.x, powerUp.y - powerUp.size, powerUp.x, powerUp.y + powerUp.size);
+    gradient.addColorStop(0, "#fff8dc");
+    gradient.addColorStop(1, powerUp.color);
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(powerUp.x, powerUp.y, powerUp.size, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = "#190f23";
+    ctx.font = "700 11px Courier New, monospace";
+    ctx.fillText(getPowerUpShortLabel(powerUp.type), powerUp.x, powerUp.y + 1);
+  }
+}
+
+function getPowerUpShortLabel(type) {
+  if (type === "tinyBall") return "T";
+  if (type === "slowMo") return "SM";
+  if (type === "scoreBoost") return "2X";
+  if (type === "extraLife") return "+1";
+  return "MB";
 }
 
 function drawParticles() {
@@ -538,10 +767,12 @@ function drawHud() {
   drawHudPill(14, 14, 108, 32, `SCORE ${game.score}`, "#ff476f");
   drawHudPill(146, 14, 108, 32, `BEST ${game.best}`, "#ffcf5c");
   drawHudPill(278, 14, 108, 32, `LIVES ${game.lives}`, "#57e3ff");
+  drawHudPill(14, 332, 112, 28, `BALLS ${game.balls.length}`, "#7dffb6");
+  drawActiveEffects();
 
   drawWrappedCenteredText(
-    "MOVE MOUSE OR USE WASD/ARROWS. P PAUSE. R RESTART.",
-    60,
+    "MOVE MOUSE OR USE WASD/ARROWS. CATCH POWER-UPS. P PAUSE. R RESTART.",
+    63,
     10,
     "rgba(255, 236, 182, 0.82)",
     360,
@@ -561,7 +792,43 @@ function drawHudPill(x, y, width, height, text, accent) {
 
   ctx.fillStyle = "#fff6da";
   ctx.textAlign = "left";
+  ctx.font = "bold 16px Courier New, monospace";
   ctx.fillText(text, x + 22, y + 8);
+}
+
+function drawActiveEffects() {
+  const now = performance.now();
+  const effects = [];
+
+  if (game.effects.tinyBallUntil > now) {
+    effects.push({
+      text: `TINY ${Math.ceil((game.effects.tinyBallUntil - now) / 1000)}S`,
+      color: "#57e3ff",
+      width: 106,
+    });
+  }
+
+  if (game.effects.slowMoUntil > now) {
+    effects.push({
+      text: `SLOW ${Math.ceil((game.effects.slowMoUntil - now) / 1000)}S`,
+      color: "#9f8cff",
+      width: 106,
+    });
+  }
+
+  if (game.effects.scoreBoostUntil > now) {
+    effects.push({
+      text: `2X ${Math.ceil((game.effects.scoreBoostUntil - now) / 1000)}S`,
+      color: "#ffcf5c",
+      width: 92,
+    });
+  }
+
+  let x = 136;
+  for (const effect of effects) {
+    drawHudPill(x, 332, effect.width, 28, effect.text, effect.color);
+    x += effect.width + 10;
+  }
 }
 
 function drawOverlay(alpha) {
@@ -691,7 +958,7 @@ function drawWelcome(now) {
   drawButton("HOW TO PLAY", layout.how, "#2c2140", "#57e3ff");
 
   drawWrappedCenteredText(
-    "MOUSE, WASD, AND ARROWS ALL WORK.",
+    "POWER-UPS CAN DROP DURING LONGER RUNS.",
     layout.footerY,
     12,
     "rgba(255, 238, 199, 0.78)",
@@ -712,7 +979,7 @@ function drawHowToPlay() {
   const lines = [
     "Keep the ball above the paddle.",
     "Move with mouse, WASD, or arrows.",
-    "Each hit gives you 1 point.",
+    "Catch T, SM, 2X, +1, and MB power-ups.",
     "The paddle shrinks as you score.",
     "Press P to pause and R to restart.",
     "Best score saves automatically.",
@@ -752,7 +1019,7 @@ function drawPaused() {
   const layout = getPauseLayout();
 
   drawHud();
-  drawBall();
+  drawBalls();
   drawOverlay(0.44);
   drawPanel(layout.panel.x, layout.panel.y, layout.panel.w, layout.panel.h);
   drawCenteredText("PAUSED", 166, 34, "#57e3ff");
@@ -764,7 +1031,7 @@ function drawLost() {
   const layout = getGameOverLayout();
 
   drawHud();
-  drawBall();
+  drawBalls();
   drawOverlay(0.46);
   drawPanel(layout.panel.x, layout.panel.y, layout.panel.w, layout.panel.h);
   drawCenteredText("GAME OVER", 142, 34, "#ff476f");
@@ -804,21 +1071,24 @@ function animate(now) {
   const delta = Math.min((now - game.lastTime) / 1000 || 0, 0.033);
   game.lastTime = now;
 
+  updateEffects(now);
   updateStars(delta);
   updateParticles(delta);
   updatePaddle(delta, now);
+  updatePowerUps(delta);
 
   drawBackground();
   drawArenaGlow();
   drawPaddle();
+  drawPowerUps();
   drawParticles();
 
   if (game.state === "playing") {
-    updateBall(delta);
-    drawBall();
+    updateBalls(delta);
+    drawBalls();
     drawHud();
   } else if (game.state === "countdown") {
-    drawBall();
+    drawBalls();
     drawCountdown(now);
   } else if (game.state === "paused") {
     drawPaused();
