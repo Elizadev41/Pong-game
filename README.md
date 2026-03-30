@@ -6,7 +6,7 @@ I originally started this project around August 2025 during GWC. In December 202
 
 Even with all of that, this is still *my* first game, and I am really proud of how far it has come.
 
-## About The Game
+# About The Game
 
 This is a paddle-and-ball survival game built with HTML, CSS, and JavaScript using the canvas API.
 
@@ -19,7 +19,7 @@ The goal is simple:
 
 As your score goes up, the game gets harder because the paddle slowly shrinks.
 
-## Features
+# Features
 
 - Retro arcade-inspired look
 - Mouse and keyboard controls
@@ -30,7 +30,7 @@ As your score goes up, the game gets harder because the paddle slowly shrinks.
 - Increasing difficulty over time
 - Particle effects and animated background
 
-## Controls
+# Controls
 
 - Mouse: move the paddle
 - A / D: move left and right
@@ -39,7 +39,7 @@ As your score goes up, the game gets harder because the paddle slowly shrinks.
 - R: restart
 - Enter or Space: start from the welcome screen
 
-## Running The Project
+# Running The Project
 
 This project does not need a build step.
 
@@ -48,14 +48,14 @@ This project does not need a build step.
 
 If you use a live server extension in VS Code, that works too.
 
-## Project Files
+# Project Files
 
 - index.html sets up the page and canvas
 - style.css styles the game frame and page
 - script.js contains the full game logic
 - p5play.js is included in the project folder from earlier work, though the current version of the game runs from script.js
 
-## Reflection
+# Reflection
 
 This project means a lot to me because it shows how much I have learned. I made it as one of my earliest game projects, came back to improve it more than once, and kept going even when moving the code caused bugs and other issues. Seeing it again made me want to finish it properly instead of leaving it behind.
 
