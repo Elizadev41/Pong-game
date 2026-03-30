@@ -7,12 +7,51 @@ const SOUND_STORAGE_KEY = "paddle-ball-sound-muted";
 const BASE_BALL_SIZE = 18;
 const TINY_BALL_SIZE = 12;
 const POWER_UP_START_SCORE = 5;
+const DIFFICULTY_MODES = {
+  easy: {
+    label: "EASY",
+    color: "#7dffb6",
+    startingLives: 4,
+    paddleWidth: 126,
+    minPaddleWidth: 74,
+    paddleSpeed: 450,
+    launchSpeed: 300,
+    speedGainPerScore: 8,
+    maxLaunchBonus: 110,
+    paddleShrinkPerScore: 1.4,
+  },
+  normal: {
+    label: "NORMAL",
+    color: "#57e3ff",
+    startingLives: 3,
+    paddleWidth: 110,
+    minPaddleWidth: 62,
+    paddleSpeed: 420,
+    launchSpeed: 320,
+    speedGainPerScore: 10,
+    maxLaunchBonus: 140,
+    paddleShrinkPerScore: 2,
+  },
+  hard: {
+    label: "HARD",
+    color: "#ff6f91",
+    startingLives: 2,
+    paddleWidth: 96,
+    minPaddleWidth: 50,
+    paddleSpeed: 395,
+    launchSpeed: 344,
+    speedGainPerScore: 12,
+    maxLaunchBonus: 175,
+    paddleShrinkPerScore: 2.4,
+  },
+};
 const POWER_UP_TYPES = {
   tinyBall: { label: "TINY BALL", color: "#57e3ff" },
   slowMo: { label: "SLOW MO", color: "#9f8cff" },
   scoreBoost: { label: "2X SCORE", color: "#ffcf5c" },
   extraLife: { label: "+1 LIFE", color: "#ff6f91" },
   multiBall: { label: "MULTI BALL", color: "#7dffb6" },
+  shield: { label: "SHIELD", color: "#8ee6ff" },
 };
 
 const game = {
@@ -34,10 +73,13 @@ const game = {
   score: 0,
   best: loadBestScore(),
   lives: 3,
+  difficulty: "normal",
   state: "welcome",
   pausedFromState: "playing",
   countdownStart: 0,
   lastTime: 0,
+  runStartedAt: 0,
+  runEndedAt: 0,
   mouseX: canvas.width / 2,
   lastMouseMove: 0,
   activeControl: "mouse",
@@ -50,6 +92,8 @@ const game = {
     slowMoUntil: 0,
     scoreBoostUntil: 0,
   },
+  shieldCharges: 0,
+  stats: createRunStats(),
   nextPowerUpScore: 0,
   lastPowerUpLabel: "",
   lastPowerUpColor: "#ffffff",
@@ -60,6 +104,7 @@ const sound = createSoundSystem();
 updateSoundButton();
 
 createStars();
+applyDifficultySettings();
 resetBalls();
 
 function createSoundSystem() {
@@ -204,6 +249,12 @@ function playPowerUpSound(type) {
     return;
   }
 
+  if (type === "shield") {
+    playTone({ frequency: 360, slideTo: 620, duration: 0.18, type: "sawtooth", volume: 0.032 });
+    playTone({ frequency: 540, slideTo: 820, duration: 0.16, type: "triangle", volume: 0.024, when: 0.04 });
+    return;
+  }
+
   playTone({ frequency: 470, slideTo: 760, duration: 0.13, type: "triangle", volume: 0.032 });
 }
 
@@ -221,17 +272,27 @@ function toggleSound() {
 
 function getMenuLayout() {
   const panelWidth = 320;
-  const panelHeight = 312;
+  const panelHeight = 352;
   const panelX = (game.width - panelWidth) / 2;
-  const panelY = 58;
+  const panelY = 36;
   const buttonWidth = 160;
   const buttonHeight = 46;
   const buttonX = panelX + (panelWidth - buttonWidth) / 2;
+  const diffY = panelY + 186;
+  const diffWidth = 82;
+  const diffGap = 8;
+  const diffX = panelX + (panelWidth - (diffWidth * 3 + diffGap * 2)) / 2;
 
   return {
     panel: { x: panelX, y: panelY, w: panelWidth, h: panelHeight },
-    play: { x: buttonX, y: panelY + 192, w: buttonWidth, h: buttonHeight },
-    how: { x: buttonX, y: panelY + 250, w: buttonWidth, h: buttonHeight },
+    difficultyLabelY: panelY + 176,
+    difficultyButtons: [
+      { key: "easy", x: diffX, y: diffY, w: diffWidth, h: 34 },
+      { key: "normal", x: diffX + diffWidth + diffGap, y: diffY, w: diffWidth, h: 34 },
+      { key: "hard", x: diffX + (diffWidth + diffGap) * 2, y: diffY, w: diffWidth, h: 34 },
+    ],
+    play: { x: buttonX, y: panelY + 244, w: buttonWidth, h: buttonHeight },
+    how: { x: buttonX, y: panelY + 298, w: buttonWidth, h: buttonHeight },
     footerY: panelY + panelHeight + 10,
   };
 }
@@ -258,13 +319,13 @@ function getPauseLayout() {
 
 function getGameOverLayout() {
   const panelWidth = 284;
-  const panelHeight = 214;
+  const panelHeight = 274;
   const panelX = (game.width - panelWidth) / 2;
-  const panelY = 92;
+  const panelY = 62;
 
   return {
     panel: { x: panelX, y: panelY, w: panelWidth, h: panelHeight },
-    playAgain: { x: panelX + 62, y: panelY + 160, w: 160, h: 46 },
+    playAgain: { x: panelX + 62, y: panelY + 218, w: 160, h: 46 },
   };
 }
 
@@ -294,6 +355,46 @@ function createStars() {
       alpha: Math.random() * 0.5 + 0.25,
     });
   }
+}
+
+function createRunStats() {
+  return {
+    bounces: 0,
+    powerUpsCollected: 0,
+    shieldsTriggered: 0,
+    longestStreak: 0,
+    currentStreak: 0,
+    maxBallsInPlay: 1,
+  };
+}
+
+function getDifficultyConfig() {
+  return DIFFICULTY_MODES[game.difficulty];
+}
+
+function setDifficulty(mode) {
+  if (!DIFFICULTY_MODES[mode]) {
+    return;
+  }
+
+  game.difficulty = mode;
+  applyDifficultySettings();
+}
+
+function applyDifficultySettings() {
+  const config = getDifficultyConfig();
+  game.paddle.baseWidth = config.paddleWidth;
+  game.paddle.minWidth = config.minPaddleWidth;
+  game.paddle.speed = config.paddleSpeed;
+  game.paddle.width = config.paddleWidth;
+  game.paddle.x = clamp(game.paddle.x, 0, game.width - game.paddle.width);
+}
+
+function formatDuration(milliseconds) {
+  const totalSeconds = Math.max(0, Math.floor(milliseconds / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${String(seconds).padStart(2, "0")}`;
 }
 
 function createBall(overrides = {}) {
@@ -354,14 +455,19 @@ function clearEffects() {
   game.effects.tinyBallUntil = 0;
   game.effects.slowMoUntil = 0;
   game.effects.scoreBoostUntil = 0;
+  game.shieldCharges = 0;
   game.lastPowerUpLabel = "";
   game.lastPowerUpUntil = 0;
 }
 
 function startCountdown(newGame) {
   if (newGame) {
+    applyDifficultySettings();
     game.score = 0;
-    game.lives = 3;
+    game.lives = getDifficultyConfig().startingLives;
+    game.runStartedAt = performance.now();
+    game.runEndedAt = 0;
+    game.stats = createRunStats();
     clearEffects();
     clearPowerUps();
     resetPowerUpSchedule();
@@ -376,7 +482,8 @@ function startCountdown(newGame) {
 }
 
 function launchBall() {
-  const launchSpeed = 320 + Math.min(game.score * 10, 140);
+  const config = getDifficultyConfig();
+  const launchSpeed = config.launchSpeed + Math.min(game.score * config.speedGainPerScore, config.maxLaunchBonus);
 
   for (const ball of game.balls) {
     const angle = (Math.random() * 120 + 210) * (Math.PI / 180);
@@ -408,7 +515,8 @@ function restartGame() {
 }
 
 function updateDifficulty() {
-  const nextWidth = Math.max(game.paddle.minWidth, game.paddle.baseWidth - game.score * 2);
+  const config = getDifficultyConfig();
+  const nextWidth = Math.max(game.paddle.minWidth, game.paddle.baseWidth - game.score * config.paddleShrinkPerScore);
   const centerX = game.paddle.x + game.paddle.width / 2;
   game.paddle.width = nextWidth;
   game.paddle.x = clamp(centerX - nextWidth / 2, 0, game.width - nextWidth);
@@ -457,7 +565,7 @@ function updateStars(delta) {
 }
 
 function getRandomPowerUpType() {
-  const types = ["tinyBall", "slowMo", "scoreBoost", "extraLife", "multiBall"];
+  const types = ["tinyBall", "slowMo", "scoreBoost", "extraLife", "multiBall", "shield"];
   return types[Math.floor(Math.random() * types.length)];
 }
 
@@ -500,8 +608,11 @@ function activatePowerUp(type) {
     game.lives += 1;
   } else if (type === "multiBall") {
     spawnMultiBall();
+  } else if (type === "shield") {
+    game.shieldCharges = Math.min(game.shieldCharges + 1, 2);
   }
 
+  game.stats.powerUpsCollected += 1;
   showPowerUpMessage(type);
   playPowerUpSound(type);
 }
@@ -526,6 +637,7 @@ function spawnMultiBall() {
       vy: -Math.max(220, Math.abs(sourceBall.vy) || sourceBall.speed),
     })
   );
+  game.stats.maxBallsInPlay = Math.max(game.stats.maxBallsInPlay, game.balls.length);
 }
 
 function updatePowerUps(delta) {
@@ -647,12 +759,26 @@ function updateBall(ball, delta) {
     ball.speed = speed;
 
     game.score += isScoreBoostActive() ? 2 : 1;
+    game.stats.bounces += 1;
+    game.stats.currentStreak += 1;
+    game.stats.longestStreak = Math.max(game.stats.longestStreak, game.stats.currentStreak);
     game.best = Math.max(game.best, game.score);
     saveBestScore();
     updateDifficulty();
     spawnParticles(ball.x, ball.y, "#5ff7c8", 16, -80);
     playPaddleSound();
     maybeSpawnPowerUp(ball.x, ball.y);
+  }
+
+  if (ball.y + radius >= game.height - 10 && game.shieldCharges > 0 && ball.vy > 0) {
+    game.shieldCharges -= 1;
+    game.stats.shieldsTriggered += 1;
+    game.stats.currentStreak = 0;
+    ball.y = game.height - 10 - radius;
+    ball.vy = -Math.max(Math.abs(ball.vy), 260);
+    spawnParticles(ball.x, game.height - 10, "#8ee6ff", 24, -120);
+    playPowerUpSound("shield");
+    return false;
   }
 
   if (ball.y - radius > game.height) {
@@ -667,6 +793,7 @@ function updateBalls(delta) {
   for (let i = game.balls.length - 1; i >= 0; i -= 1) {
     const ballLost = updateBall(game.balls[i], delta);
     if (ballLost) {
+      game.stats.currentStreak = 0;
       game.balls.splice(i, 1);
     }
   }
@@ -681,6 +808,7 @@ function updateBalls(delta) {
   if (game.lives <= 0) {
     game.best = Math.max(game.best, game.score);
     saveBestScore();
+    game.runEndedAt = performance.now();
     game.state = "lost";
     resetBalls();
     playGameOverSound();
@@ -789,6 +917,24 @@ function drawParticles() {
   }
 }
 
+function drawShield() {
+  if (game.shieldCharges <= 0) {
+    return;
+  }
+
+  const shieldY = game.height - 10;
+  ctx.save();
+  ctx.strokeStyle = "rgba(142, 230, 255, 0.9)";
+  ctx.lineWidth = 4;
+  ctx.shadowColor = "rgba(142, 230, 255, 0.55)";
+  ctx.shadowBlur = 12;
+  ctx.beginPath();
+  ctx.moveTo(38, shieldY);
+  ctx.lineTo(game.width - 38, shieldY);
+  ctx.stroke();
+  ctx.restore();
+}
+
 function drawHud() {
   ctx.textBaseline = "top";
   ctx.font = "bold 16px Courier New, monospace";
@@ -797,6 +943,7 @@ function drawHud() {
   drawHudPill(146, 14, 108, 32, `BEST ${game.best}`, "#ffcf5c");
   drawHudPill(278, 14, 108, 32, `LIVES ${game.lives}`, "#57e3ff");
   drawHudPill(14, 332, 112, 28, `BALLS ${game.balls.length}`, "#7dffb6");
+  drawHudPill(142, 332, 108, 28, `MODE ${getDifficultyConfig().label}`, getDifficultyConfig().color);
   drawActiveEffects();
 
   drawWrappedCenteredText(
@@ -853,7 +1000,15 @@ function drawActiveEffects() {
     });
   }
 
-  let x = 136;
+  if (game.shieldCharges > 0) {
+    effects.push({
+      text: `SHIELD ${game.shieldCharges}`,
+      color: "#8ee6ff",
+      width: 116,
+    });
+  }
+
+  let x = 264;
   for (const effect of effects) {
     drawHudPill(x, 332, effect.width, 28, effect.text, effect.color);
     x += effect.width + 10;
@@ -985,6 +1140,29 @@ function drawButton(text, button, fill, outline) {
   drawCenteredText(text, button.y + button.h / 2 + 1, 18, "#f7feff");
 }
 
+function drawDifficultyButton(button) {
+  const isSelected = game.difficulty === button.key;
+  const config = DIFFICULTY_MODES[button.key];
+  const fill = isSelected ? hexToRgba(config.color, 0.22) : "#241936";
+  const outline = isSelected ? config.color : "#4b3966";
+  const label = button.key === "normal" ? "NORMAL" : config.label;
+
+  ctx.fillStyle = fill;
+  roundRect(ctx, button.x, button.y, button.w, button.h, 8);
+  ctx.fill();
+
+  ctx.strokeStyle = outline;
+  ctx.lineWidth = isSelected ? 3 : 2;
+  roundRect(ctx, button.x, button.y, button.w, button.h, 8);
+  ctx.stroke();
+
+  ctx.fillStyle = isSelected ? "#fff8dd" : "#d7cfee";
+  ctx.font = "700 14px Courier New, monospace";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(label, button.x + button.w / 2, button.y + button.h / 2 + 1);
+}
+
 function drawWelcome(now) {
   const layout = getMenuLayout();
 
@@ -1008,6 +1186,11 @@ function drawWelcome(now) {
     "500"
   );
   drawCenteredText("BEST SCORE: " + game.best, layout.panel.y + 156, 20, "#ffffff");
+  drawCenteredText("SELECT DIFFICULTY", layout.difficultyLabelY, 14, "#ffe9b8", "600");
+
+  for (const button of layout.difficultyButtons) {
+    drawDifficultyButton(button);
+  }
 
   const pulse = (Math.sin(now / 240) + 1) / 2;
   const playFill = pulse > 0.5 ? "#ff476f" : "#cc2f56";
@@ -1036,7 +1219,7 @@ function drawHowToPlay() {
   const lines = [
     "Keep the ball above the paddle.",
     "Move with mouse, WASD, or arrows.",
-    "Catch T, SM, 2X, +1, and MB power-ups.",
+    "Catch T, SM, 2X, +1, MB, and SH power-ups.",
     "The paddle shrinks as you score.",
     "Press P to pause and R to restart.",
     "Best score saves automatically.",
@@ -1086,14 +1269,30 @@ function drawPaused() {
 
 function drawLost() {
   const layout = getGameOverLayout();
+  const survivalTime = formatDuration((game.runEndedAt || performance.now()) - game.runStartedAt);
+  const statLines = [
+    `MODE ${getDifficultyConfig().label}`,
+    `TIME ${survivalTime}`,
+    `BOUNCES ${game.stats.bounces}`,
+    `POWER-UPS ${game.stats.powerUpsCollected}`,
+    `BEST STREAK ${game.stats.longestStreak}`,
+    `SHIELD SAVES ${game.stats.shieldsTriggered}`,
+  ];
 
   drawHud();
   drawBalls();
   drawOverlay(0.46);
   drawPanel(layout.panel.x, layout.panel.y, layout.panel.w, layout.panel.h);
-  drawCenteredText("GAME OVER", 142, 34, "#ff476f");
-  drawCenteredText("FINAL SCORE: " + game.score, 192, 20, "#ffffff");
-  drawCenteredText("BEST SCORE: " + game.best, 224, 18, "#f6dd7a", "600");
+  drawCenteredText("GAME OVER", layout.panel.y + 30, 34, "#ff476f");
+  drawCenteredText("FINAL SCORE: " + game.score, layout.panel.y + 78, 20, "#ffffff");
+  drawCenteredText("BEST SCORE: " + game.best, layout.panel.y + 106, 18, "#f6dd7a", "600");
+
+  let y = layout.panel.y + 136;
+  for (const line of statLines) {
+    drawCenteredText(line, y, 14, "#e8e1ff", "500");
+    y += 20;
+  }
+
   drawButton("PLAY AGAIN", layout.playAgain, "#cc2f56", "#ffd68a");
 }
 
@@ -1136,7 +1335,10 @@ function animate(now) {
 
   drawBackground();
   drawArenaGlow();
-  drawPaddle();
+  if (game.state !== "welcome") {
+    drawPaddle();
+    drawShield();
+  }
   drawPowerUps();
   drawParticles();
 
@@ -1181,6 +1383,14 @@ canvas.addEventListener("click", (event) => {
   const gameOverLayout = getGameOverLayout();
 
   if (game.state === "welcome") {
+    for (const button of menuLayout.difficultyButtons) {
+      if (pointInButton(button, clickX, clickY)) {
+        playButtonSound();
+        setDifficulty(button.key);
+        return;
+      }
+    }
+
     if (pointInButton(menuLayout.play, clickX, clickY)) {
       playButtonSound();
       startCountdown(true);
@@ -1244,6 +1454,16 @@ window.addEventListener("keydown", (event) => {
 
   if (key === "m") {
     toggleSound();
+  }
+
+  if (game.state === "welcome") {
+    if (key === "1") {
+      setDifficulty("easy");
+    } else if (key === "2") {
+      setDifficulty("normal");
+    } else if (key === "3") {
+      setDifficulty("hard");
+    }
   }
 
   if ((key === "enter" || key === " ") && game.state === "welcome") {

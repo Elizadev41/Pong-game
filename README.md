@@ -25,9 +25,12 @@ As your score goes up, the game gets harder because the paddle slowly shrinks.
 - Mouse and keyboard controls
 - Start screen and how-to-play screen
 - Pause and restart controls
+- Difficulty modes
 - Lives system
 - Best score saved with localStorage
 - Increasing difficulty over time
+- End-of-run stat summary
+- Shield power-up
 - Particle effects and animated background
 
 # Controls
@@ -38,6 +41,7 @@ As your score goes up, the game gets harder because the paddle slowly shrinks.
 - P: pause or resume
 - R: restart
 - Enter or Space: start from the welcome screen
+- 1 / 2 / 3: choose Easy / Normal / Hard from the welcome screen
 
 # Running The Project
 
