@@ -6,6 +6,7 @@ const STORAGE_KEY = "paddle-ball-best-score";
 const SOUND_STORAGE_KEY = "paddle-ball-sound-muted";
 const BASE_BALL_SIZE = 18;
 const TINY_BALL_SIZE = 12;
+const POWER_UP_START_SCORE = 5;
 const POWER_UP_TYPES = {
   tinyBall: { label: "TINY BALL", color: "#57e3ff" },
   slowMo: { label: "SLOW MO", color: "#9f8cff" },
@@ -49,6 +50,7 @@ const game = {
     slowMoUntil: 0,
     scoreBoostUntil: 0,
   },
+  nextPowerUpScore: 0,
 };
 
 const sound = createSoundSystem();
@@ -318,6 +320,14 @@ function refreshBallSizes() {
   }
 }
 
+function getNextPowerUpScore(currentScore = game.score) {
+  return currentScore + Math.floor(Math.random() * 4) + 1;
+}
+
+function resetPowerUpSchedule() {
+  game.nextPowerUpScore = POWER_UP_START_SCORE + Math.floor(Math.random() * 4) + 1;
+}
+
 function resetPaddle() {
   game.paddle.width = game.paddle.baseWidth;
   game.paddle.x = game.width / 2 - game.paddle.width / 2;
@@ -343,6 +353,7 @@ function startCountdown(newGame) {
     game.lives = 3;
     clearEffects();
     clearPowerUps();
+    resetPowerUpSchedule();
     resetPaddle();
   }
 
@@ -440,6 +451,10 @@ function getRandomPowerUpType() {
 }
 
 function maybeSpawnPowerUp(x, y) {
+  if (game.score < game.nextPowerUpScore) {
+    return;
+  }
+
   if (Math.random() > 0.2) {
     return;
   }
@@ -456,6 +471,8 @@ function maybeSpawnPowerUp(x, y) {
     color: config.color,
     label: config.label,
   });
+
+  game.nextPowerUpScore = getNextPowerUpScore();
 }
 
 function activatePowerUp(type) {
@@ -465,7 +482,7 @@ function activatePowerUp(type) {
     game.effects.tinyBallUntil = now + 10000;
     refreshBallSizes();
   } else if (type === "slowMo") {
-    game.effects.slowMoUntil = now + 9000;
+    game.effects.slowMoUntil = now + 10000;
   } else if (type === "scoreBoost") {
     game.effects.scoreBoostUntil = now + 10000;
   } else if (type === "extraLife") {
@@ -482,21 +499,21 @@ function spawnMultiBall() {
     return;
   }
 
-  const sourceBall = game.balls[0];
+  const sourceBall = game.balls[Math.floor(Math.random() * game.balls.length)];
   const ballSize = getCurrentBallSize();
+  const sourceDirection = sourceBall.vx === 0 ? 1 : Math.sign(sourceBall.vx);
+  const newDirection = sourceDirection * -1;
 
-  for (const direction of [-1, 1]) {
-    game.balls.push(
-      createBall({
-        x: sourceBall.x,
-        y: sourceBall.y,
-        size: ballSize,
-        speed: sourceBall.speed,
-        vx: (Math.abs(sourceBall.vx) + 80) * direction,
-        vy: -Math.max(220, Math.abs(sourceBall.vy) || sourceBall.speed),
-      })
-    );
-  }
+  game.balls.push(
+    createBall({
+      x: sourceBall.x,
+      y: sourceBall.y,
+      size: ballSize,
+      speed: sourceBall.speed,
+      vx: (Math.abs(sourceBall.vx) + 80) * newDirection,
+      vy: -Math.max(220, Math.abs(sourceBall.vy) || sourceBall.speed),
+    })
+  );
 }
 
 function updatePowerUps(delta) {
