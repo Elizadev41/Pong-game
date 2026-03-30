@@ -7,6 +7,8 @@ const SOUND_STORAGE_KEY = "paddle-ball-sound-muted";
 const BASE_BALL_SIZE = 18;
 const TINY_BALL_SIZE = 12;
 const POWER_UP_START_SCORE = 5;
+const COMBO_STREAK_START = 3;
+const COMBO_MAX_MULTIPLIER = 4;
 const DIFFICULTY_MODES = {
   easy: {
     label: "EASY",
@@ -98,6 +100,7 @@ const game = {
   lastPowerUpLabel: "",
   lastPowerUpColor: "#ffffff",
   lastPowerUpUntil: 0,
+  lastComboUntil: 0,
 };
 
 const sound = createSoundSystem();
@@ -438,6 +441,22 @@ function showPowerUpMessage(type) {
   game.lastPowerUpUntil = performance.now() + 1600;
 }
 
+function getComboMultiplier(streak = game.stats.currentStreak) {
+  if (streak < COMBO_STREAK_START) {
+    return 1;
+  }
+
+  return Math.min(COMBO_MAX_MULTIPLIER, streak - COMBO_STREAK_START + 2);
+}
+
+function showComboMessage(multiplier) {
+  if (multiplier > 1) {
+    game.lastComboUntil = performance.now() + 950;
+  } else {
+    game.lastComboUntil = 0;
+  }
+}
+
 function resetPaddle() {
   game.paddle.width = game.paddle.baseWidth;
   game.paddle.x = game.width / 2 - game.paddle.width / 2;
@@ -458,6 +477,7 @@ function clearEffects() {
   game.shieldCharges = 0;
   game.lastPowerUpLabel = "";
   game.lastPowerUpUntil = 0;
+  game.lastComboUntil = 0;
 }
 
 function startCountdown(newGame) {
@@ -758,10 +778,13 @@ function updateBall(ball, delta) {
     ball.vy = -speed;
     ball.speed = speed;
 
-    game.score += isScoreBoostActive() ? 2 : 1;
     game.stats.bounces += 1;
     game.stats.currentStreak += 1;
     game.stats.longestStreak = Math.max(game.stats.longestStreak, game.stats.currentStreak);
+    const comboMultiplier = getComboMultiplier();
+    const pointsEarned = (isScoreBoostActive() ? 2 : 1) * comboMultiplier;
+    game.score += pointsEarned;
+    showComboMessage(comboMultiplier);
     game.best = Math.max(game.best, game.score);
     saveBestScore();
     updateDifficulty();
@@ -944,6 +967,9 @@ function drawHud() {
   drawHudPill(278, 14, 108, 32, `LIVES ${game.lives}`, "#57e3ff");
   drawHudPill(14, 332, 112, 28, `BALLS ${game.balls.length}`, "#7dffb6");
   drawHudPill(142, 332, 108, 28, `MODE ${getDifficultyConfig().label}`, getDifficultyConfig().color);
+  if (getComboMultiplier() > 1) {
+    drawHudPill(266, 14, 120, 32, `COMBO X${getComboMultiplier()}`, "#ff9a5c");
+  }
   drawActiveEffects();
 
   drawWrappedCenteredText(
@@ -1040,6 +1066,39 @@ function drawPowerUpMessage() {
   ctx.fillStyle = "#fff6da";
   ctx.font = "700 16px Courier New, monospace";
   ctx.fillText(game.lastPowerUpLabel, game.width / 2 + 8, y + height / 2 + 1);
+  ctx.restore();
+}
+
+function drawComboMessage() {
+  if (game.lastComboUntil <= performance.now()) {
+    return;
+  }
+
+  const multiplier = getComboMultiplier();
+  if (multiplier <= 1) {
+    return;
+  }
+
+  ctx.save();
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+
+  const width = 124;
+  const height = 28;
+  const x = game.width - width - 14;
+  const y = 54;
+
+  ctx.fillStyle = "rgba(10, 8, 18, 0.92)";
+  roundRect(ctx, x, y, width, height, 10);
+  ctx.fill();
+
+  ctx.fillStyle = "#ff9a5c";
+  roundRect(ctx, x + 5, y + 5, 8, height - 10, 3);
+  ctx.fill();
+
+  ctx.fillStyle = "#fff6da";
+  ctx.font = "700 14px Courier New, monospace";
+  ctx.fillText(`COMBO X${multiplier}`, x + width / 2 + 4, y + height / 2 + 1);
   ctx.restore();
 }
 
@@ -1347,6 +1406,7 @@ function animate(now) {
     drawBalls();
     drawHud();
     drawPowerUpMessage();
+    drawComboMessage();
   } else if (game.state === "countdown") {
     drawBalls();
     drawCountdown(now);
