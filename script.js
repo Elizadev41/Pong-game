@@ -18,7 +18,7 @@ const game = {
   ball: {
     size: 18,
     x: canvas.width / 2,
-    y: 185,
+    y: canvas.height * 0.46,
     vx: 0,
     vy: 0,
     speed: 320,
@@ -39,15 +39,59 @@ const game = {
     left: false,
     right: false,
   },
-  menuButtons: {
-    play: { x: 120, y: 250, w: 160, h: 46 },
-    how: { x: 120, y: 308, w: 160, h: 46 },
-    back: { x: 120, y: 324, w: 160, h: 46 },
-  },
 };
 
 createStars();
 resetBall();
+
+function getMenuLayout() {
+  const panelWidth = 320;
+  const panelHeight = 312;
+  const panelX = (game.width - panelWidth) / 2;
+  const panelY = 58;
+  const buttonWidth = 160;
+  const buttonHeight = 46;
+  const buttonX = panelX + (panelWidth - buttonWidth) / 2;
+
+  return {
+    panel: { x: panelX, y: panelY, w: panelWidth, h: panelHeight },
+    play: { x: buttonX, y: panelY + 192, w: buttonWidth, h: buttonHeight },
+    how: { x: buttonX, y: panelY + 250, w: buttonWidth, h: buttonHeight },
+    footerY: panelY + panelHeight + 10,
+  };
+}
+
+function getHowToLayout() {
+  const panelWidth = 344;
+  const panelHeight = 344;
+  const panelX = (game.width - panelWidth) / 2;
+  const panelY = 34;
+
+  return {
+    panel: { x: panelX, y: panelY, w: panelWidth, h: panelHeight },
+    back: { x: panelX + 112, y: panelY + 290, w: 120, h: 42 },
+    textX: panelX + 52,
+    bulletX: panelX + 36,
+  };
+}
+
+function getPauseLayout() {
+  return {
+    panel: { x: (game.width - 256) / 2, y: 118, w: 256, h: 160 },
+  };
+}
+
+function getGameOverLayout() {
+  const panelWidth = 284;
+  const panelHeight = 214;
+  const panelX = (game.width - panelWidth) / 2;
+  const panelY = 92;
+
+  return {
+    panel: { x: panelX, y: panelY, w: panelWidth, h: panelHeight },
+    playAgain: { x: panelX + 62, y: panelY + 160, w: 160, h: 46 },
+  };
+}
 
 function loadBestScore() {
   try {
@@ -79,7 +123,7 @@ function createStars() {
 
 function resetBall() {
   game.ball.x = game.width / 2;
-  game.ball.y = 185;
+  game.ball.y = game.height * 0.46;
   game.ball.vx = 0;
   game.ball.vy = 0;
 }
@@ -345,7 +389,7 @@ function drawHud() {
     60,
     10,
     "rgba(255, 236, 182, 0.82)",
-    320,
+    360,
     12,
     "400"
   );
@@ -463,33 +507,52 @@ function drawButton(text, button, fill, outline) {
 }
 
 function drawWelcome(now) {
+  const layout = getMenuLayout();
+
   drawOverlay(0.18);
-  drawPanel(40, 58, 320, 312);
+  drawPanel(layout.panel.x, layout.panel.y, layout.panel.w, layout.panel.h);
 
   ctx.fillStyle = "rgba(255, 71, 111, 0.18)";
   ctx.beginPath();
-  ctx.arc(320, 92, 40, 0, Math.PI * 2);
+  ctx.arc(layout.panel.x + layout.panel.w - 40, layout.panel.y + 34, 40, 0, Math.PI * 2);
   ctx.fill();
 
-  drawCenteredText("PADDLE BALL", 104, 34, "#ffcf5c");
-  drawCenteredText("RETRO ARCADE", 136, 18, "#57e3ff", "600");
-  drawWrappedCenteredText("KEEP THE BALL ALIVE. SURVIVE THE SPEED UP.", 178, 14, "#ffeec7", 248, 18, "500");
-  drawCenteredText("BEST SCORE: " + game.best, 214, 20, "#ffffff");
+  drawCenteredText("PADDLE BALL", layout.panel.y + 46, 34, "#ffcf5c");
+  drawCenteredText("RETRO ARCADE", layout.panel.y + 78, 18, "#57e3ff", "600");
+  drawWrappedCenteredText(
+    "KEEP THE BALL ALIVE. SURVIVE THE SPEED UP.",
+    layout.panel.y + 120,
+    14,
+    "#ffeec7",
+    248,
+    18,
+    "500"
+  );
+  drawCenteredText("BEST SCORE: " + game.best, layout.panel.y + 156, 20, "#ffffff");
 
   const pulse = (Math.sin(now / 240) + 1) / 2;
   const playFill = pulse > 0.5 ? "#ff476f" : "#cc2f56";
-  drawButton("PLAY", game.menuButtons.play, playFill, "#ffd68a");
-  drawButton("HOW TO PLAY", game.menuButtons.how, "#2c2140", "#57e3ff");
+  drawButton("PLAY", layout.play, playFill, "#ffd68a");
+  drawButton("HOW TO PLAY", layout.how, "#2c2140", "#57e3ff");
 
-  ctx.fillStyle = "rgba(255, 238, 199, 0.78)";
-  drawWrappedCenteredText("MOUSE, WASD, AND ARROWS ALL WORK.", 380, 12, "rgba(255, 238, 199, 0.78)", 270, 14, "400");
+  drawWrappedCenteredText(
+    "MOUSE, WASD, AND ARROWS ALL WORK.",
+    layout.footerY,
+    12,
+    "rgba(255, 238, 199, 0.78)",
+    320,
+    14,
+    "400"
+  );
 }
 
 function drawHowToPlay() {
-  drawOverlay(0.22);
-  drawPanel(28, 34, 344, 344);
+  const layout = getHowToLayout();
 
-  drawCenteredText("HOW TO PLAY", 82, 30, "#ffcf5c");
+  drawOverlay(0.22);
+  drawPanel(layout.panel.x, layout.panel.y, layout.panel.w, layout.panel.h);
+
+  drawCenteredText("HOW TO PLAY", layout.panel.y + 48, 30, "#ffcf5c");
 
   const lines = [
     "Keep the ball above the paddle.",
@@ -500,18 +563,18 @@ function drawHowToPlay() {
     "Best score saves automatically.",
   ];
 
-  let y = 128;
+  let y = layout.panel.y + 94;
   for (const line of lines) {
     ctx.fillStyle = "#ff476f";
     ctx.beginPath();
-    ctx.arc(64, y, 4, 0, Math.PI * 2);
+    ctx.arc(layout.bulletX, y, 4, 0, Math.PI * 2);
     ctx.fill();
 
-    const lineCount = drawWrappedText(line, 80, y, 13, "#fff4d2", 264, 16);
+    const lineCount = drawWrappedText(line, layout.textX, y, 13, "#fff4d2", 264, 16);
     y += Math.max(32, lineCount * 18 + 12);
   }
 
-  drawButton("BACK", game.menuButtons.back, "#2c2140", "#57e3ff");
+  drawButton("BACK", layout.back, "#2c2140", "#57e3ff");
 }
 
 function drawCountdown(now) {
@@ -531,24 +594,28 @@ function drawCountdown(now) {
 }
 
 function drawPaused() {
+  const layout = getPauseLayout();
+
   drawHud();
   drawBall();
   drawOverlay(0.44);
-  drawPanel(72, 118, 256, 160);
+  drawPanel(layout.panel.x, layout.panel.y, layout.panel.w, layout.panel.h);
   drawCenteredText("PAUSED", 166, 34, "#57e3ff");
   drawCenteredText("PRESS P TO RESUME", 214, 16, "#ffffff", "500");
   drawCenteredText("PRESS R TO RESTART", 244, 16, "#f6dd7a", "500");
 }
 
 function drawLost() {
+  const layout = getGameOverLayout();
+
   drawHud();
   drawBall();
   drawOverlay(0.46);
-  drawPanel(58, 92, 284, 214);
+  drawPanel(layout.panel.x, layout.panel.y, layout.panel.w, layout.panel.h);
   drawCenteredText("GAME OVER", 142, 34, "#ff476f");
   drawCenteredText("FINAL SCORE: " + game.score, 192, 20, "#ffffff");
   drawCenteredText("BEST SCORE: " + game.best, 224, 18, "#f6dd7a", "600");
-  drawButton("PLAY AGAIN", { x: 120, y: 252, w: 160, h: 46 }, "#cc2f56", "#ffd68a");
+  drawButton("PLAY AGAIN", layout.playAgain, "#cc2f56", "#ffd68a");
 }
 
 function roundRect(context, x, y, width, height, radius) {
@@ -621,26 +688,29 @@ canvas.addEventListener("click", (event) => {
   const rect = canvas.getBoundingClientRect();
   const clickX = ((event.clientX - rect.left) / rect.width) * canvas.width;
   const clickY = ((event.clientY - rect.top) / rect.height) * canvas.height;
+  const menuLayout = getMenuLayout();
+  const howLayout = getHowToLayout();
+  const gameOverLayout = getGameOverLayout();
 
   if (game.state === "welcome") {
-    if (pointInButton(game.menuButtons.play, clickX, clickY)) {
+    if (pointInButton(menuLayout.play, clickX, clickY)) {
       startCountdown(true);
       return;
     }
 
-    if (pointInButton(game.menuButtons.how, clickX, clickY)) {
+    if (pointInButton(menuLayout.how, clickX, clickY)) {
       game.state = "how";
     }
 
     return;
   }
 
-  if (game.state === "how" && pointInButton(game.menuButtons.back, clickX, clickY)) {
+  if (game.state === "how" && pointInButton(howLayout.back, clickX, clickY)) {
     game.state = "welcome";
     return;
   }
 
-  if (game.state === "lost" && clickX >= 120 && clickX <= 280 && clickY >= 252 && clickY <= 298) {
+  if (game.state === "lost" && pointInButton(gameOverLayout.playAgain, clickX, clickY)) {
     startCountdown(true);
   }
 });
