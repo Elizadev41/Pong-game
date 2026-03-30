@@ -10,8 +10,12 @@
 
 <body>
   <main class="app">
+    <div class="topbar">
+      <p class="hint">Move the mouse or use WASD / arrows. Press P to pause.</p>
+      <button id="soundToggle" class="sound-toggle" type="button" aria-pressed="false">Sound: On</button>
+    </div>
     <canvas id="gameCanvas" width="400" height="400"></canvas>
-    <p class="hint">Move the mouse to control the paddle. Click the button to start.</p>
+    <p class="hint">Click the canvas or press a key once to enable sound in your browser.</p>
   </main>
   <script src="script.js"></script>
 </body>

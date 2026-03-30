@@ -28,6 +28,14 @@ body {
     0 26px 60px rgba(0, 0, 0, 0.45);
 }
 
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
 #gameCanvas {
   display: block;
   width: 100%;
@@ -43,10 +51,57 @@ body {
 }
 
 .hint {
-  margin-top: 14px;
   color: #ffe7a8;
   font-size: 13px;
   line-height: 1.5;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+  text-align: left;
+}
+
+.sound-toggle {
+  flex: 0 0 auto;
+  padding: 10px 14px;
+  border: 2px solid #57e3ff;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #281a3d, #171024);
+  color: #f4fbff;
+  font: inherit;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    transform 120ms ease,
+    box-shadow 120ms ease,
+    border-color 120ms ease;
+}
+
+.sound-toggle:hover,
+.sound-toggle:focus-visible {
+  outline: none;
+  transform: translateY(-1px);
+  border-color: #ffcf5c;
+  box-shadow: 0 0 0 3px rgba(87, 227, 255, 0.16);
+}
+
+.sound-toggle[aria-pressed="true"] {
+  border-color: #ff6f91;
+  color: #ffd7e1;
+}
+
+.app > .hint:last-of-type {
+  margin-top: 14px;
+  text-align: center;
+}
+
+@media (max-width: 640px) {
+  .topbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .hint {
+    text-align: center;
+  }
 }
