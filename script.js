@@ -1,62 +1,202 @@
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
+const STORAGE_KEY = "paddle-ball-best-score";
+
 const game = {
   width: canvas.width,
   height: canvas.height,
   paddle: {
-    width: 100,
+    baseWidth: 110,
+    minWidth: 62,
+    width: 110,
     height: 18,
-    x: canvas.width / 2 - 50,
-    y: canvas.height - 28,
+    x: canvas.width / 2 - 55,
+    y: canvas.height - 30,
+    speed: 420,
   },
   ball: {
     size: 18,
     x: canvas.width / 2,
-    y: 180,
+    y: 185,
     vx: 0,
     vy: 0,
+    speed: 320,
   },
+  particles: [],
+  stars: [],
   score: 0,
-  best: 0,
+  best: loadBestScore(),
   lives: 3,
   state: "welcome",
+  pausedFromState: "playing",
   countdownStart: 0,
   lastTime: 0,
   mouseX: canvas.width / 2,
+  lastMouseMove: 0,
+  activeControl: "mouse",
+  keys: {
+    left: false,
+    right: false,
+  },
+  menuButtons: {
+    play: { x: 120, y: 250, w: 160, h: 46 },
+    how: { x: 120, y: 308, w: 160, h: 46 },
+    back: { x: 120, y: 324, w: 160, h: 46 },
+  },
 };
+
+createStars();
+resetBall();
+
+function loadBestScore() {
+  try {
+    const stored = window.localStorage.getItem(STORAGE_KEY);
+    const parsed = Number(stored);
+    return Number.isFinite(parsed) ? parsed : 0;
+  } catch {
+    return 0;
+  }
+}
+
+function saveBestScore() {
+  try {
+    window.localStorage.setItem(STORAGE_KEY, String(game.best));
+  } catch {}
+}
+
+function createStars() {
+  for (let i = 0; i < 32; i += 1) {
+    game.stars.push({
+      x: Math.random() * game.width,
+      y: Math.random() * game.height,
+      size: Math.random() * 2.4 + 0.8,
+      speed: Math.random() * 16 + 8,
+      alpha: Math.random() * 0.5 + 0.25,
+    });
+  }
+}
 
 function resetBall() {
   game.ball.x = game.width / 2;
-  game.ball.y = 180;
+  game.ball.y = 185;
   game.ball.vx = 0;
   game.ball.vy = 0;
+}
+
+function resetPaddle() {
+  game.paddle.width = game.paddle.baseWidth;
+  game.paddle.x = game.width / 2 - game.paddle.width / 2;
 }
 
 function startCountdown(newGame) {
   if (newGame) {
     game.score = 0;
     game.lives = 3;
+    resetPaddle();
   }
 
   game.state = "countdown";
   game.countdownStart = performance.now();
   resetBall();
+  clearParticles();
 }
 
 function launchBall() {
   const angle = (Math.random() * 120 + 210) * (Math.PI / 180);
-  const speed = 320;
-  game.ball.vx = Math.cos(angle) * speed;
-  game.ball.vy = Math.sin(angle) * speed;
+  game.ball.speed = 320 + Math.min(game.score * 10, 140);
+  game.ball.vx = Math.cos(angle) * game.ball.speed;
+  game.ball.vy = Math.sin(angle) * game.ball.speed;
   game.state = "playing";
 }
 
-function updatePaddle() {
-  game.paddle.x = Math.max(
-    0,
-    Math.min(game.mouseX - game.paddle.width / 2, game.width - game.paddle.width)
-  );
+function pauseGame() {
+  if (game.state === "playing" || game.state === "countdown") {
+    game.pausedFromState = game.state;
+    game.state = "paused";
+  }
+}
+
+function resumeGame() {
+  if (game.state === "paused") {
+    game.state = game.pausedFromState;
+  }
+}
+
+function restartGame() {
+  startCountdown(true);
+}
+
+function clearParticles() {
+  game.particles.length = 0;
+}
+
+function updateDifficulty() {
+  const nextWidth = Math.max(game.paddle.minWidth, game.paddle.baseWidth - game.score * 2);
+  const centerX = game.paddle.x + game.paddle.width / 2;
+  game.paddle.width = nextWidth;
+  game.paddle.x = clamp(centerX - nextWidth / 2, 0, game.width - nextWidth);
+}
+
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(value, max));
+}
+
+function spawnParticles(x, y, color, count, forceY) {
+  for (let i = 0; i < count; i += 1) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = Math.random() * 90 + 40;
+    game.particles.push({
+      x,
+      y,
+      vx: Math.cos(angle) * speed,
+      vy: forceY !== undefined ? forceY * (Math.random() * 0.6 + 0.7) : Math.sin(angle) * speed,
+      life: Math.random() * 0.35 + 0.25,
+      maxLife: 0.6,
+      size: Math.random() * 4 + 2,
+      color,
+    });
+  }
+}
+
+function updateParticles(delta) {
+  for (const particle of game.particles) {
+    particle.x += particle.vx * delta;
+    particle.y += particle.vy * delta;
+    particle.life -= delta;
+    particle.vy += 120 * delta;
+  }
+
+  game.particles = game.particles.filter((particle) => particle.life > 0);
+}
+
+function updateStars(delta) {
+  for (const star of game.stars) {
+    star.y += star.speed * delta;
+    if (star.y > game.height + 4) {
+      star.y = -4;
+      star.x = Math.random() * game.width;
+    }
+  }
+}
+
+function updatePaddle(delta, now) {
+  if (game.keys.left || game.keys.right) {
+    game.activeControl = "keyboard";
+  } else if (now - game.lastMouseMove < 600) {
+    game.activeControl = "mouse";
+  }
+
+  if (game.activeControl === "keyboard") {
+    let direction = 0;
+    if (game.keys.left) direction -= 1;
+    if (game.keys.right) direction += 1;
+    game.paddle.x += direction * game.paddle.speed * delta;
+  } else {
+    game.paddle.x = game.mouseX - game.paddle.width / 2;
+  }
+
+  game.paddle.x = clamp(game.paddle.x, 0, game.width - game.paddle.width);
 }
 
 function updateBall(delta) {
@@ -69,16 +209,19 @@ function updateBall(delta) {
   if (ball.x - radius <= 0) {
     ball.x = radius;
     ball.vx *= -1;
+    spawnParticles(ball.x, ball.y, "#7be7e7", 8);
   }
 
   if (ball.x + radius >= game.width) {
     ball.x = game.width - radius;
     ball.vx *= -1;
+    spawnParticles(ball.x, ball.y, "#7be7e7", 8);
   }
 
   if (ball.y - radius <= 0) {
     ball.y = radius;
     ball.vy *= -1;
+    spawnParticles(ball.x, ball.y, "#ffe27a", 10, 55);
   }
 
   const paddle = game.paddle;
@@ -95,18 +238,23 @@ function updateBall(delta) {
     const speed = Math.min(320 + game.score * 18, 620);
 
     ball.y = paddle.y - radius;
-    ball.vx = offset * 260;
+    ball.vx = offset * 290;
     ball.vy = -speed;
 
     game.score += 1;
     game.best = Math.max(game.best, game.score);
+    saveBestScore();
+    updateDifficulty();
+    spawnParticles(ball.x, ball.y, "#5ff7c8", 16, -80);
   }
 
   if (ball.y - radius > game.height) {
     game.lives -= 1;
+    spawnParticles(ball.x, game.height - 8, "#ff7d7d", 18, -100);
 
     if (game.lives <= 0) {
       game.best = Math.max(game.best, game.score);
+      saveBestScore();
       game.state = "lost";
       resetBall();
     } else {
@@ -117,78 +265,199 @@ function updateBall(delta) {
 
 function drawBackground() {
   const gradient = ctx.createLinearGradient(0, 0, 0, game.height);
-  gradient.addColorStop(0, "#dff4f3");
-  gradient.addColorStop(1, "#bdd9d7");
+  gradient.addColorStop(0, "#081221");
+  gradient.addColorStop(0.55, "#10253b");
+  gradient.addColorStop(1, "#183a45");
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, game.width, game.height);
+
+  ctx.fillStyle = "rgba(124, 225, 219, 0.08)";
+  ctx.fillRect(24, 24, game.width - 48, game.height - 48);
+
+  for (const star of game.stars) {
+    ctx.fillStyle = `rgba(220, 247, 255, ${star.alpha})`;
+    ctx.beginPath();
+    ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function drawArenaGlow() {
+  ctx.strokeStyle = "rgba(120, 237, 230, 0.45)";
+  ctx.lineWidth = 3;
+  roundRect(ctx, 14, 14, game.width - 28, game.height - 28, 18);
+  ctx.stroke();
 }
 
 function drawPaddle() {
-  ctx.fillStyle = "#5f9ea0";
-  roundRect(ctx, game.paddle.x, game.paddle.y, game.paddle.width, game.paddle.height, 8);
+  const paddle = game.paddle;
+  const gradient = ctx.createLinearGradient(paddle.x, paddle.y, paddle.x, paddle.y + paddle.height);
+  gradient.addColorStop(0, "#8ce7e0");
+  gradient.addColorStop(1, "#2f8f93");
+  ctx.fillStyle = gradient;
+  roundRect(ctx, paddle.x, paddle.y, paddle.width, paddle.height, 9);
   ctx.fill();
 }
 
 function drawBall() {
-  ctx.fillStyle = "#008080";
+  const gradient = ctx.createRadialGradient(
+    game.ball.x - 3,
+    game.ball.y - 3,
+    2,
+    game.ball.x,
+    game.ball.y,
+    game.ball.size
+  );
+  gradient.addColorStop(0, "#ffffff");
+  gradient.addColorStop(0.45, "#88f4ea");
+  gradient.addColorStop(1, "#1ba6a1");
+  ctx.fillStyle = gradient;
   ctx.beginPath();
   ctx.arc(game.ball.x, game.ball.y, game.ball.size / 2, 0, Math.PI * 2);
   ctx.fill();
 }
 
+function drawParticles() {
+  for (const particle of game.particles) {
+    const alpha = particle.life / particle.maxLife;
+    ctx.fillStyle = hexToRgba(particle.color, alpha);
+    ctx.beginPath();
+    ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
 function drawHud() {
-  ctx.font = "18px Arial";
   ctx.textBaseline = "top";
+  ctx.font = "bold 16px Trebuchet MS, Arial, sans-serif";
 
-  ctx.fillStyle = "#008080";
-  ctx.textAlign = "left";
-  ctx.fillText("Score: " + game.score, 10, 10);
+  drawHudPill(14, 14, 108, 32, `Score ${game.score}`, "#42d8c8");
+  drawHudPill(146, 14, 108, 32, `Best ${game.best}`, "#f9db6d");
+  drawHudPill(278, 14, 108, 32, `Lives ${game.lives}`, "#ff8a8a");
 
+  ctx.fillStyle = "rgba(235, 248, 255, 0.72)";
+  ctx.font = "12px Trebuchet MS, Arial, sans-serif";
   ctx.textAlign = "center";
-  ctx.fillText("Best: " + game.best, game.width / 2, 10);
+  ctx.fillText("Move: Mouse / WASD / Arrows   Pause: P   Restart: R", game.width / 2, 54);
+}
 
-  ctx.fillStyle = "#dc3c3c";
-  ctx.textAlign = "right";
-  ctx.fillText("Lives: " + game.lives, game.width - 10, 10);
+function drawHudPill(x, y, width, height, text, accent) {
+  ctx.fillStyle = "rgba(8, 18, 33, 0.72)";
+  roundRect(ctx, x, y, width, height, 16);
+  ctx.fill();
+
+  ctx.fillStyle = accent;
+  roundRect(ctx, x + 4, y + 4, 8, height - 8, 4);
+  ctx.fill();
+
+  ctx.fillStyle = "#eef9fb";
+  ctx.textAlign = "left";
+  ctx.fillText(text, x + 22, y + 8);
 }
 
 function drawOverlay(alpha) {
-  ctx.fillStyle = `rgba(0, 0, 0, ${alpha})`;
+  ctx.fillStyle = `rgba(3, 8, 16, ${alpha})`;
   ctx.fillRect(0, 0, game.width, game.height);
 }
 
-function drawCenteredText(text, y, size, color) {
+function drawPanel(x, y, width, height) {
+  const gradient = ctx.createLinearGradient(x, y, x, y + height);
+  gradient.addColorStop(0, "rgba(12, 24, 42, 0.94)");
+  gradient.addColorStop(1, "rgba(16, 42, 58, 0.94)");
+  ctx.fillStyle = gradient;
+  roundRect(ctx, x, y, width, height, 24);
+  ctx.fill();
+
+  ctx.strokeStyle = "rgba(120, 237, 230, 0.28)";
+  ctx.lineWidth = 2;
+  roundRect(ctx, x + 1, y + 1, width - 2, height - 2, 23);
+  ctx.stroke();
+}
+
+function drawCenteredText(text, y, size, color, weight = "700") {
   ctx.fillStyle = color;
-  ctx.font = `${size}px Arial`;
+  ctx.font = `${weight} ${size}px Trebuchet MS, Arial, sans-serif`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillText(text, game.width / 2, y);
 }
 
-function drawButton(text, x, y, width, height, color) {
-  ctx.fillStyle = color;
-  roundRect(ctx, x, y, width, height, 22);
+function drawButton(text, button, fill, outline) {
+  ctx.fillStyle = fill;
+  roundRect(ctx, button.x, button.y, button.w, button.h, 23);
   ctx.fill();
-  drawCenteredText(text, y + height / 2 + 1, 18, "#ffffff");
+
+  ctx.strokeStyle = outline;
+  ctx.lineWidth = 2;
+  roundRect(ctx, button.x, button.y, button.w, button.h, 23);
+  ctx.stroke();
+
+  drawCenteredText(text, button.y + button.h / 2 + 1, 18, "#f7feff");
 }
 
 function drawWelcome(now) {
-  drawOverlay(0.5);
-  drawCenteredText("Paddle Ball", 120, 36, "#00b4b4");
-  drawCenteredText("Keep the ball in the air.", 180, 16, "#ffffff");
-  drawCenteredText("Do not let it touch the ground.", 205, 16, "#ffffff");
-  drawCenteredText("You start with 3 lives.", 250, 14, "#ffdc00");
-  drawCenteredText("The ball speeds up as your score grows.", 272, 14, "#ffdc00");
-  drawCenteredText("Move the mouse to control the paddle.", 294, 14, "#ffdc00");
+  drawOverlay(0.18);
+  drawPanel(40, 58, 320, 312);
 
-  const pulse = (Math.sin(now / 300) + 1) / 2;
-  const color = pulse > 0.5 ? "#00c8c8" : "#00a0a0";
-  drawButton("PLAY", game.width / 2 - 80, 330, 160, 44, color);
+  ctx.fillStyle = "rgba(85, 224, 218, 0.16)";
+  ctx.beginPath();
+  ctx.arc(320, 92, 40, 0, Math.PI * 2);
+  ctx.fill();
+
+  drawCenteredText("Paddle Ball", 104, 34, "#78ede6");
+  drawCenteredText("Arcade Edition", 136, 18, "#f6dd7a", "600");
+  drawCenteredText("Keep the ball alive. Survive as the pace ramps up.", 174, 15, "#d5edf2", "500");
+  drawCenteredText("Best Score: " + game.best, 206, 20, "#ffffff");
+
+  const pulse = (Math.sin(now / 240) + 1) / 2;
+  const playFill = pulse > 0.5 ? "#15aeb0" : "#0d8f94";
+  drawButton("Play", game.menuButtons.play, playFill, "#74ece5");
+  drawButton("How To Play", game.menuButtons.how, "#22384e", "#8ad9ff");
+
+  ctx.fillStyle = "rgba(229, 246, 248, 0.72)";
+  ctx.font = "13px Trebuchet MS, Arial, sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText("Mouse, WASD, and arrow keys all work.", game.width / 2, 381);
+}
+
+function drawHowToPlay() {
+  drawOverlay(0.22);
+  drawPanel(34, 42, 332, 334);
+
+  drawCenteredText("How To Play", 82, 30, "#8eece7");
+
+  const lines = [
+    "Keep the ball from falling past the paddle.",
+    "Move with mouse, A/D, or the arrow keys.",
+    "Every hit raises your score and increases difficulty.",
+    "The paddle slowly shrinks as your score grows.",
+    "Press P to pause and R to restart instantly.",
+    "Your best score is saved automatically.",
+  ];
+
+  ctx.fillStyle = "#e8f7fb";
+  ctx.font = "15px Trebuchet MS, Arial, sans-serif";
+  ctx.textAlign = "left";
+  ctx.textBaseline = "middle";
+
+  let y = 128;
+  for (const line of lines) {
+    ctx.fillStyle = "#78ede6";
+    ctx.beginPath();
+    ctx.arc(64, y, 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = "#e8f7fb";
+    ctx.fillText(line, 80, y);
+    y += 36;
+  }
+
+  drawButton("Back", game.menuButtons.back, "#22384e", "#8ad9ff");
 }
 
 function drawCountdown(now) {
   drawHud();
-  drawOverlay(0.35);
+  drawOverlay(0.2);
 
   const elapsed = (now - game.countdownStart) / 1000;
   const num = 3 - Math.floor(elapsed);
@@ -198,17 +467,29 @@ function drawCountdown(now) {
     return;
   }
 
-  drawCenteredText("Get ready!", 150, 20, "#ffffff");
-  drawCenteredText(String(num), 220, 90, "#ffdc00");
+  drawCenteredText("Get Ready", 160, 22, "#ffffff");
+  drawCenteredText(String(num), 224, 92, "#ffe27a");
+}
+
+function drawPaused() {
+  drawHud();
+  drawBall();
+  drawOverlay(0.44);
+  drawPanel(72, 118, 256, 160);
+  drawCenteredText("Paused", 166, 34, "#8eece7");
+  drawCenteredText("Press P to resume", 214, 18, "#ffffff", "500");
+  drawCenteredText("Press R to restart", 244, 18, "#f6dd7a", "500");
 }
 
 function drawLost() {
   drawHud();
-  drawOverlay(0.55);
-  drawCenteredText("You Lose!", 140, 38, "#dc3c3c");
-  drawCenteredText("Final Score: " + game.score, 195, 20, "#ffffff");
-  drawCenteredText("Best: " + game.best, 230, 18, "#ffdc00");
-  drawButton("PLAY AGAIN", game.width / 2 - 80, 300, 160, 44, "#00b4b4");
+  drawBall();
+  drawOverlay(0.46);
+  drawPanel(58, 92, 284, 214);
+  drawCenteredText("Game Over", 142, 34, "#ff8a8a");
+  drawCenteredText("Final Score: " + game.score, 192, 22, "#ffffff");
+  drawCenteredText("Best Score: " + game.best, 224, 18, "#f6dd7a", "600");
+  drawButton("Play Again", { x: 120, y: 252, w: 160, h: 46 }, "#15aeb0", "#74ece5");
 }
 
 function roundRect(context, x, y, width, height, radius) {
@@ -225,24 +506,45 @@ function roundRect(context, x, y, width, height, radius) {
   context.closePath();
 }
 
+function hexToRgba(hex, alpha) {
+  const clean = hex.replace("#", "");
+  const value = parseInt(clean, 16);
+  const r = (value >> 16) & 255;
+  const g = (value >> 8) & 255;
+  const b = value & 255;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function pointInButton(button, x, y) {
+  return x >= button.x && x <= button.x + button.w && y >= button.y && y <= button.y + button.h;
+}
+
 function animate(now) {
   const delta = Math.min((now - game.lastTime) / 1000 || 0, 0.033);
   game.lastTime = now;
 
-  updatePaddle();
+  updateStars(delta);
+  updateParticles(delta);
+  updatePaddle(delta, now);
+
   drawBackground();
+  drawArenaGlow();
   drawPaddle();
+  drawParticles();
 
   if (game.state === "playing") {
-    drawBall();
     updateBall(delta);
+    drawBall();
     drawHud();
   } else if (game.state === "countdown") {
     drawBall();
     drawCountdown(now);
+  } else if (game.state === "paused") {
+    drawPaused();
   } else if (game.state === "lost") {
-    drawBall();
     drawLost();
+  } else if (game.state === "how") {
+    drawHowToPlay();
   } else {
     drawWelcome(now);
   }
@@ -253,6 +555,7 @@ function animate(now) {
 canvas.addEventListener("mousemove", (event) => {
   const rect = canvas.getBoundingClientRect();
   game.mouseX = ((event.clientX - rect.left) / rect.width) * canvas.width;
+  game.lastMouseMove = performance.now();
 });
 
 canvas.addEventListener("click", (event) => {
@@ -260,22 +563,70 @@ canvas.addEventListener("click", (event) => {
   const clickX = ((event.clientX - rect.left) / rect.width) * canvas.width;
   const clickY = ((event.clientY - rect.top) / rect.height) * canvas.height;
 
-  const playButton =
-    game.state === "welcome" &&
-    clickX >= game.width / 2 - 80 &&
-    clickX <= game.width / 2 + 80 &&
-    clickY >= 330 &&
-    clickY <= 374;
+  if (game.state === "welcome") {
+    if (pointInButton(game.menuButtons.play, clickX, clickY)) {
+      startCountdown(true);
+      return;
+    }
 
-  const replayButton =
-    game.state === "lost" &&
-    clickX >= game.width / 2 - 80 &&
-    clickX <= game.width / 2 + 80 &&
-    clickY >= 300 &&
-    clickY <= 344;
+    if (pointInButton(game.menuButtons.how, clickX, clickY)) {
+      game.state = "how";
+    }
 
-  if (playButton || replayButton) {
+    return;
+  }
+
+  if (game.state === "how" && pointInButton(game.menuButtons.back, clickX, clickY)) {
+    game.state = "welcome";
+    return;
+  }
+
+  if (game.state === "lost" && clickX >= 120 && clickX <= 280 && clickY >= 252 && clickY <= 298) {
     startCountdown(true);
+  }
+});
+
+window.addEventListener("keydown", (event) => {
+  const key = event.key.toLowerCase();
+
+  if (["arrowleft", "arrowright", " ", "p", "r"].includes(key)) {
+    event.preventDefault();
+  }
+
+  if (key === "a" || key === "arrowleft") {
+    game.keys.left = true;
+  }
+
+  if (key === "d" || key === "arrowright") {
+    game.keys.right = true;
+  }
+
+  if (key === "p") {
+    if (game.state === "paused") {
+      resumeGame();
+    } else {
+      pauseGame();
+    }
+  }
+
+  if (key === "r") {
+    restartGame();
+  }
+
+  if ((key === "enter" || key === " ") && game.state === "welcome") {
+    startCountdown(true);
+  }
+});
+
+window.addEventListener("keyup", (event) => {
+  const key = event.key.toLowerCase();
+
+  if (key === "a" || key === "arrowleft") {
+    game.keys.left = false;
+  }
+
+  if (key === "d" || key === "arrowright") {
+    game.keys.right = false;
   }
 });
 
