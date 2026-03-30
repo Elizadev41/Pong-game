@@ -271,28 +271,28 @@ function toggleSound() {
 }
 
 function getMenuLayout() {
-  const panelWidth = 320;
-  const panelHeight = 352;
+  const panelWidth = 292;
+  const panelHeight = 318;
   const panelX = (game.width - panelWidth) / 2;
-  const panelY = 36;
-  const buttonWidth = 160;
-  const buttonHeight = 46;
+  const panelY = 42;
+  const buttonWidth = 120;
+  const buttonHeight = 30;
   const buttonX = panelX + (panelWidth - buttonWidth) / 2;
-  const diffY = panelY + 186;
-  const diffWidth = 82;
-  const diffGap = 8;
+  const diffY = panelY + 192;
+  const diffWidth = 66;
+  const diffGap = 6;
   const diffX = panelX + (panelWidth - (diffWidth * 3 + diffGap * 2)) / 2;
 
   return {
     panel: { x: panelX, y: panelY, w: panelWidth, h: panelHeight },
-    difficultyLabelY: panelY + 176,
+    difficultyLabelY: panelY + 182,
     difficultyButtons: [
-      { key: "easy", x: diffX, y: diffY, w: diffWidth, h: 34 },
-      { key: "normal", x: diffX + diffWidth + diffGap, y: diffY, w: diffWidth, h: 34 },
-      { key: "hard", x: diffX + (diffWidth + diffGap) * 2, y: diffY, w: diffWidth, h: 34 },
+      { key: "easy", x: diffX, y: diffY, w: diffWidth, h: 28 },
+      { key: "normal", x: diffX + diffWidth + diffGap, y: diffY, w: diffWidth, h: 28 },
+      { key: "hard", x: diffX + (diffWidth + diffGap) * 2, y: diffY, w: diffWidth, h: 28 },
     ],
-    play: { x: buttonX, y: panelY + 244, w: buttonWidth, h: buttonHeight },
-    how: { x: buttonX, y: panelY + 298, w: buttonWidth, h: buttonHeight },
+    play: { x: buttonX, y: panelY + 230, w: buttonWidth, h: buttonHeight },
+    how: { x: buttonX, y: panelY + 268, w: buttonWidth, h: buttonHeight },
     footerY: panelY + panelHeight + 10,
   };
 }
@@ -1129,15 +1129,15 @@ function drawWrappedText(text, x, y, size, color, maxWidth, lineHeight, weight =
 
 function drawButton(text, button, fill, outline) {
   ctx.fillStyle = fill;
-  roundRect(ctx, button.x, button.y, button.w, button.h, 8);
+  roundRect(ctx, button.x, button.y, button.w, button.h, 7);
   ctx.fill();
 
   ctx.strokeStyle = outline;
-  ctx.lineWidth = 3;
-  roundRect(ctx, button.x, button.y, button.w, button.h, 8);
+  ctx.lineWidth = 2;
+  roundRect(ctx, button.x, button.y, button.w, button.h, 7);
   ctx.stroke();
 
-  drawCenteredText(text, button.y + button.h / 2 + 1, 18, "#f7feff");
+  drawCenteredText(text, button.y + button.h / 2 + 1, 12, "#f7feff");
 }
 
 function drawDifficultyButton(button) {
@@ -1148,16 +1148,16 @@ function drawDifficultyButton(button) {
   const label = button.key === "normal" ? "NORMAL" : config.label;
 
   ctx.fillStyle = fill;
-  roundRect(ctx, button.x, button.y, button.w, button.h, 8);
+  roundRect(ctx, button.x, button.y, button.w, button.h, 7);
   ctx.fill();
 
   ctx.strokeStyle = outline;
-  ctx.lineWidth = isSelected ? 3 : 2;
-  roundRect(ctx, button.x, button.y, button.w, button.h, 8);
+  ctx.lineWidth = isSelected ? 2 : 1.5;
+  roundRect(ctx, button.x, button.y, button.w, button.h, 7);
   ctx.stroke();
 
   ctx.fillStyle = isSelected ? "#fff8dd" : "#d7cfee";
-  ctx.font = "700 14px Courier New, monospace";
+  ctx.font = "700 12px Courier New, monospace";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillText(label, button.x + button.w / 2, button.y + button.h / 2 + 1);
@@ -1174,19 +1174,19 @@ function drawWelcome(now) {
   ctx.arc(layout.panel.x + layout.panel.w - 40, layout.panel.y + 34, 40, 0, Math.PI * 2);
   ctx.fill();
 
-  drawCenteredText("PADDLE BALL", layout.panel.y + 46, 34, "#ffcf5c");
-  drawCenteredText("RETRO ARCADE", layout.panel.y + 78, 18, "#57e3ff", "600");
+  drawCenteredText("PADDLE BALL", layout.panel.y + 42, 28, "#ffcf5c");
+  drawCenteredText("RETRO ARCADE", layout.panel.y + 72, 15, "#57e3ff", "600");
   drawWrappedCenteredText(
     "KEEP THE BALL ALIVE. SURVIVE THE SPEED UP.",
-    layout.panel.y + 120,
-    14,
+    layout.panel.y + 112,
+    12,
     "#ffeec7",
-    248,
-    18,
+    224,
+    16,
     "500"
   );
-  drawCenteredText("BEST SCORE: " + game.best, layout.panel.y + 156, 20, "#ffffff");
-  drawCenteredText("SELECT DIFFICULTY", layout.difficultyLabelY, 14, "#ffe9b8", "600");
+  drawCenteredText("BEST SCORE: " + game.best, layout.panel.y + 148, 17, "#ffffff");
+  drawCenteredText("SELECT DIFFICULTY", layout.difficultyLabelY, 12, "#ffe9b8", "600");
 
   for (const button of layout.difficultyButtons) {
     drawDifficultyButton(button);
@@ -1200,10 +1200,10 @@ function drawWelcome(now) {
   drawWrappedCenteredText(
     "POWER-UPS CAN DROP DURING LONGER RUNS.",
     layout.footerY,
-    12,
+    10,
     "rgba(255, 238, 199, 0.78)",
-    320,
-    14,
+    280,
+    12,
     "400"
   );
 }
