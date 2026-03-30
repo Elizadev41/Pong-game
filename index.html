@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pong Game</title>
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        background: linear-gradient(180deg, #dff4f3 0%, #bdd9d7 100%);
+        font-family: Arial, sans-serif;
+      }
+
+      main {
+        text-align: center;
+      }
+
+      canvas {
+        display: block;
+        border: 4px solid #2f6f73;
+        border-radius: 12px;
+        box-shadow: 0 18px 40px rgba(0, 0, 0, 0.16);
+      }
+
+      p {
+        color: #24565a;
+        margin-top: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div id="game"></div>
+      <p>Move the mouse to control the paddle. Click to start.</p>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/p5@1.11.3/lib/p5.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/p5play@3.33.9/lib/p5play.min.js"></script>
+    <script src="./script.js"></script>
+  </body>
+</html>
