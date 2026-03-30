@@ -4,8 +4,6 @@ Paddle Ball is a small retro-style browser game and the first game I ever made, 
 
 I originally started this project around August 2025 during GWC. In December 2025, I came back to it, made more changes, and got it to a more finished state. Later, I found the project again and decided it deserved another update, so I moved it into VS Code and worked through a lot of bugs during the process. Some of the debugging and final cleanup was helped by Claude and Codex AI, especially while fixing issues from moving the code and polishing the game.
 
-Even with all of that, this is still *my* first game, and I am really proud of how far it has come.
-
 # About The Game
 
 This is a paddle-and-ball survival game built with HTML, CSS, and JavaScript using the canvas API.
