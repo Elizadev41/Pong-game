@@ -340,10 +340,15 @@ function drawHud() {
   drawHudPill(146, 14, 108, 32, `BEST ${game.best}`, "#ffcf5c");
   drawHudPill(278, 14, 108, 32, `LIVES ${game.lives}`, "#57e3ff");
 
-  ctx.fillStyle = "rgba(255, 236, 182, 0.82)";
-  ctx.font = "11px Courier New, monospace";
-  ctx.textAlign = "center";
-  ctx.fillText("MOVE MOUSE/WASD/ARROWS   P PAUSE   R RESTART", game.width / 2, 54);
+  drawWrappedCenteredText(
+    "MOVE MOUSE OR USE WASD/ARROWS. P PAUSE. R RESTART.",
+    60,
+    10,
+    "rgba(255, 236, 182, 0.82)",
+    320,
+    12,
+    "400"
+  );
 }
 
 function drawHudPill(x, y, width, height, text, accent) {
@@ -387,6 +392,63 @@ function drawCenteredText(text, y, size, color, weight = "700") {
   ctx.fillText(text, game.width / 2, y);
 }
 
+function drawWrappedCenteredText(text, y, size, color, maxWidth, lineHeight, weight = "700") {
+  ctx.fillStyle = color;
+  ctx.font = `${weight} ${size}px Courier New, monospace`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+
+  const words = text.split(" ");
+  const lines = [];
+  let currentLine = words[0] || "";
+
+  for (let i = 1; i < words.length; i += 1) {
+    const nextLine = `${currentLine} ${words[i]}`;
+    if (ctx.measureText(nextLine).width <= maxWidth) {
+      currentLine = nextLine;
+    } else {
+      lines.push(currentLine);
+      currentLine = words[i];
+    }
+  }
+
+  lines.push(currentLine);
+
+  const startY = y - ((lines.length - 1) * lineHeight) / 2;
+  for (let i = 0; i < lines.length; i += 1) {
+    ctx.fillText(lines[i], game.width / 2, startY + i * lineHeight);
+  }
+}
+
+function drawWrappedText(text, x, y, size, color, maxWidth, lineHeight, weight = "400") {
+  ctx.fillStyle = color;
+  ctx.font = `${weight} ${size}px Courier New, monospace`;
+  ctx.textAlign = "left";
+  ctx.textBaseline = "middle";
+
+  const words = text.split(" ");
+  const lines = [];
+  let currentLine = words[0] || "";
+
+  for (let i = 1; i < words.length; i += 1) {
+    const nextLine = `${currentLine} ${words[i]}`;
+    if (ctx.measureText(nextLine).width <= maxWidth) {
+      currentLine = nextLine;
+    } else {
+      lines.push(currentLine);
+      currentLine = words[i];
+    }
+  }
+
+  lines.push(currentLine);
+
+  for (let i = 0; i < lines.length; i += 1) {
+    ctx.fillText(lines[i], x, y + i * lineHeight);
+  }
+
+  return lines.length;
+}
+
 function drawButton(text, button, fill, outline) {
   ctx.fillStyle = fill;
   roundRect(ctx, button.x, button.y, button.w, button.h, 8);
@@ -411,8 +473,8 @@ function drawWelcome(now) {
 
   drawCenteredText("PADDLE BALL", 104, 34, "#ffcf5c");
   drawCenteredText("RETRO ARCADE", 136, 18, "#57e3ff", "600");
-  drawCenteredText("KEEP THE BALL ALIVE. SURVIVE THE SPEED UP.", 174, 14, "#ffeec7", "500");
-  drawCenteredText("BEST SCORE: " + game.best, 206, 20, "#ffffff");
+  drawWrappedCenteredText("KEEP THE BALL ALIVE. SURVIVE THE SPEED UP.", 178, 14, "#ffeec7", 248, 18, "500");
+  drawCenteredText("BEST SCORE: " + game.best, 214, 20, "#ffffff");
 
   const pulse = (Math.sin(now / 240) + 1) / 2;
   const playFill = pulse > 0.5 ? "#ff476f" : "#cc2f56";
@@ -420,30 +482,23 @@ function drawWelcome(now) {
   drawButton("HOW TO PLAY", game.menuButtons.how, "#2c2140", "#57e3ff");
 
   ctx.fillStyle = "rgba(255, 238, 199, 0.78)";
-  ctx.font = "12px Courier New, monospace";
-  ctx.textAlign = "center";
-  ctx.fillText("MOUSE, WASD, AND ARROWS ALL WORK.", game.width / 2, 381);
+  drawWrappedCenteredText("MOUSE, WASD, AND ARROWS ALL WORK.", 380, 12, "rgba(255, 238, 199, 0.78)", 270, 14, "400");
 }
 
 function drawHowToPlay() {
   drawOverlay(0.22);
-  drawPanel(34, 42, 332, 334);
+  drawPanel(28, 34, 344, 344);
 
   drawCenteredText("HOW TO PLAY", 82, 30, "#ffcf5c");
 
   const lines = [
-    "Keep the ball from falling past the paddle.",
-    "Move with mouse, A/D, or the arrow keys.",
-    "Every hit raises your score and increases difficulty.",
-    "The paddle slowly shrinks as your score grows.",
-    "Press P to pause and R to restart instantly.",
-    "Your best score is saved automatically.",
+    "Keep the ball above the paddle.",
+    "Move with mouse, WASD, or arrows.",
+    "Each hit gives you 1 point.",
+    "The paddle shrinks as you score.",
+    "Press P to pause and R to restart.",
+    "Best score saves automatically.",
   ];
-
-  ctx.fillStyle = "#fff4d2";
-  ctx.font = "14px Courier New, monospace";
-  ctx.textAlign = "left";
-  ctx.textBaseline = "middle";
 
   let y = 128;
   for (const line of lines) {
@@ -452,9 +507,8 @@ function drawHowToPlay() {
     ctx.arc(64, y, 4, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.fillStyle = "#fff4d2";
-    ctx.fillText(line, 80, y);
-    y += 36;
+    const lineCount = drawWrappedText(line, 80, y, 13, "#fff4d2", 264, 16);
+    y += Math.max(32, lineCount * 18 + 12);
   }
 
   drawButton("BACK", game.menuButtons.back, "#2c2140", "#57e3ff");
