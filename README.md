@@ -57,8 +57,3 @@ If you use a live server extension in VS Code, that works too.
 - script.js contains the full game logic
 - p5play.js is included in the project folder from earlier work, though the current version of the game runs from script.js
 
-# Reflection
-
-This project means a lot to me because it shows how much I have learned. I made it as one of my earliest game projects, came back to improve it more than once, and kept going even when moving the code caused bugs and other issues. Seeing it again made me want to finish it properly instead of leaving it behind.
-
-It may not be perfect, but it is a project I am genuinely proud of because it reflects growth, persistence, and the fact that I made a real game.
