@@ -41,14 +41,6 @@ As your score goes up, the game gets harder because the paddle slowly shrinks.
 - Enter or Space: start from the welcome screen
 - 1 / 2 / 3: choose Easy / Normal / Hard from the welcome screen
 
-# Running The Project
-
-This project does not need a build step.
-
-1. Open the project folder in VS Code
-2. Open index.html in a browser
-
-If you use a live server extension in VS Code, that works too.
 
 # Project Files
 
