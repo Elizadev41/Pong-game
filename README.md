@@ -2,20 +2,23 @@
 
 Paddle Ball is a small retro-style browser game and the first game I ever made, which makes this project really special to me.
 
-I originally started this project around August 2025 during GWC. In December 2025, I came back to it, made more changes, and got it to a more finished state. Later, I found the project again and decided it deserved another update, so I moved it into VS Code and worked through a lot of bugs during the process. Some of the debugging and final cleanup was helped by Claude and Codex AI, especially while fixing issues from moving the code and polishing the game.
+I started it back in August 2025 during GWC, then picked it up again in December to improve it. After that, I randomly came back to it again and decided to fully clean it up, fix bugs, and make it feel more complete.
+
+Moving everything into VS Code was lowkey chaotic 😭 but I learned a lot debugging it. I did get some help from AI tools like Claude and Codex when things got messy, especially during bug fixing and polishing, but the core of the game and how it works is mine.
 
 # About The Game
 
-This is a paddle-and-ball survival game built with HTML, CSS, and JavaScript using the canvas API.
+This is a simple paddle-and-ball survival game made using HTML, CSS, and JavaScript (canvas).
 
-The goal is simple:
+The idea is pretty straightforward:
+- Don’t let the ball fall past your paddle
+- You get points every time you hit it back up
+- The longer you last, the harder it gets
+- Try to beat your high score
 
-- Keep the ball from falling past the paddle
-- Score points every time you bounce the ball back up
-- Survive as the game speeds up
-- Try to beat your best score
+Also… the paddle shrinks over time, so yeah it gets stressful fast.
 
-As your score goes up, the game gets harder because the paddle slowly shrinks.
+
 
 # Features
 
@@ -48,4 +51,5 @@ As your score goes up, the game gets harder because the paddle slowly shrinks.
 - style.css styles the game frame and page
 - script.js contains the full game logic
 - p5play.js is included in the project folder from earlier work, though the current version of the game runs from script.js
+
 
