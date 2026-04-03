@@ -50,6 +50,6 @@ Also… the paddle shrinks over time, so yeah it gets stressful fast.
 - index.html sets up the page and canvas
 - style.css styles the game frame and page
 - script.js contains the full game logic
-- p5play.js is included in the project folder from earlier work, though the current version of the game runs from script.js
-
-
+- 
+# Note
+p5play.js was used in earlier versions but has been removed as the current game uses custom canvas JavaScript
